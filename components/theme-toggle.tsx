@@ -25,7 +25,8 @@ export function ThemeToggle() {
 
 	const currentTheme = (theme as ThemeName) || "system";
 	const currentIndex = THEME_SEQUENCE.indexOf(currentTheme);
-	const nextTheme = THEME_SEQUENCE[(currentIndex + 1) % THEME_SEQUENCE.length];
+	const nextTheme =
+		THEME_SEQUENCE[(currentIndex + 1) % THEME_SEQUENCE.length];
 
 	const handleClick = () => {
 		setTheme(nextTheme);
@@ -35,15 +36,15 @@ export function ThemeToggle() {
 		currentTheme === "system"
 			? "System theme"
 			: currentTheme === "dark"
-				? "Dark theme"
-				: "Light theme";
+			? "Dark theme"
+			: "Light theme";
 
 	const Icon =
 		currentTheme === "system"
 			? Monitor
 			: currentTheme === "dark"
-				? Moon
-				: Sun;
+			? Moon
+			: Sun;
 
 	return (
 		<Button
@@ -59,5 +60,3 @@ export function ThemeToggle() {
 		</Button>
 	);
 }
-
-

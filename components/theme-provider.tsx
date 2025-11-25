@@ -8,6 +8,13 @@ import {
 } from "next-themes";
 
 import { useSubtheme } from "@/hooks/use-subtheme";
+import {
+	useEditorSettings,
+	fonts,
+	tabSizes,
+	type FontValue,
+	type TabSize,
+} from "@/hooks/use-editor-settings";
 
 type Mode = "light" | "dark";
 
@@ -18,19 +25,28 @@ type SubthemeContextValue = {
 	updateSubtheme: (value: string) => void;
 };
 
+type EditorSettingsContextValue = {
+	font: FontValue;
+	tabSize: TabSize;
+	fonts: typeof fonts;
+	tabSizes: typeof tabSizes;
+	updateFont: (value: FontValue) => void;
+	updateTabSize: (value: TabSize) => void;
+};
+
 const SubthemeContext = React.createContext<SubthemeContextValue | undefined>(
-	undefined,
+	undefined
 );
+
+const EditorSettingsContext = React.createContext<
+	EditorSettingsContextValue | undefined
+>(undefined);
 
 export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
 	return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
 }
 
-export function AppThemeProvider({
-	children,
-}: {
-	children: React.ReactNode;
-}) {
+export function AppThemeProvider({ children }: { children: React.ReactNode }) {
 	return (
 		<NextThemesProvider
 			attribute="class"
@@ -47,12 +63,29 @@ function SubthemeSync({ children }: { children: React.ReactNode }) {
 	const { resolvedTheme } = useTheme();
 	const mode: Mode = resolvedTheme === "dark" ? "dark" : "light";
 	const { subtheme, available, updateSubtheme } = useSubtheme(mode);
+	const {
+		font,
+		tabSize,
+		updateFont,
+		updateTabSize,
+	} = useEditorSettings();
 
 	return (
 		<SubthemeContext.Provider
 			value={{ mode, subtheme, available, updateSubtheme }}
 		>
-			{children}
+			<EditorSettingsContext.Provider
+				value={{
+					font,
+					tabSize,
+					fonts,
+					tabSizes,
+					updateFont,
+					updateTabSize,
+				}}
+			>
+				{children}
+			</EditorSettingsContext.Provider>
 		</SubthemeContext.Provider>
 	);
 }
@@ -61,10 +94,22 @@ export function useSubthemeContext() {
 	const ctx = React.useContext(SubthemeContext);
 
 	if (!ctx) {
-		throw new Error("useSubthemeContext must be used within AppThemeProvider");
+		throw new Error(
+			"useSubthemeContext must be used within AppThemeProvider"
+		);
 	}
 
 	return ctx;
 }
 
+export function useEditorSettingsContext() {
+	const ctx = React.useContext(EditorSettingsContext);
 
+	if (!ctx) {
+		throw new Error(
+			"useEditorSettingsContext must be used within AppThemeProvider"
+		);
+	}
+
+	return ctx;
+}

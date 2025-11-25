@@ -76,5 +76,3 @@ export function useSubtheme(mode: Mode) {
 
 	return { subtheme, available, updateSubtheme };
 }
-
-

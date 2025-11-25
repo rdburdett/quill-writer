@@ -1,45 +1,35 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Settings } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { SubthemeSelector } from "@/components/theme/subtheme-selector";
+import { NovelEditor } from "@/components/novel-editor";
 
 export default function Home() {
 	return (
-		<div className="flex min-h-screen items-center justify-center">
-			<main className="flex min-h-screen w-full max-w-3xl flex-col justify-between px-16 py-32">
-				<header className="mb-8 flex items-center justify-between gap-4">
-					<Image
-						className="dark:invert"
-						src="/next.svg"
-						alt="Next.js logo"
-						width={100}
-						height={20}
-						priority
-					/>
-					<div className="flex items-center gap-3">
-						<SubthemeSelector />
-						<ThemeToggle />
-					</div>
-				</header>
+		<div className="relative min-h-screen">
+			<Link
+				href="/settings"
+				className="fixed right-6 top-6 z-10"
+				aria-label="Open settings"
+			>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="rounded-full opacity-50 transition-opacity hover:opacity-100"
+				>
+					<Settings className="h-[1.1rem] w-[1.1rem]" />
+				</Button>
+			</Link>
 
-				<section className="flex flex-1 flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-					<h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight">
-						To get started, click the button.
-					</h1>
-					<p className="max-w-md text-lg leading-8 text-muted-foreground">
-						This is a shadcn/ui button using your current theme tokens, so it
-						should adapt to light, dark, and system modes automatically, while
-						the subtheme picks your preferred light/dark palette.
-					</p>
-				</section>
-
-				<section className="mt-10 flex flex-col gap-4 text-base font-medium sm:flex-row">
-					<Button size="lg">Test shadcn Button</Button>
-					<Button variant="outline" size="lg">
-						Secondary action
-					</Button>
-				</section>
+			<main className="mx-auto flex min-h-screen max-w-3xl flex-col px-6 py-16 sm:px-8">
+				<NovelEditor />
 			</main>
+
+			<footer className="fixed bottom-4 left-1/2 -translate-x-1/2">
+				<p className="text-xs text-muted-foreground/60">
+					Press <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">/</kbd> for commands
+				</p>
+			</footer>
 		</div>
 	);
 }
