@@ -1,0 +1,17 @@
+[
+	{
+		"id": "browser-001",
+		"task": "Implement file browser collapsible behavior",
+		"done": false
+	},
+	{
+		"id": "browser-002",
+		"task": "Add drag handles to file items",
+		"done": false
+	},
+	{
+		"id": "arrange-001",
+		"task": "Initial arrangement column layout",
+		"done": false
+	}
+]

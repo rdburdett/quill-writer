@@ -1,35 +1,41 @@
-import Link from "next/link";
-import { Settings } from "lucide-react";
+"use client";
 
-import { Button } from "@/components/ui/button";
-import { NovelEditor } from "@/components/novel-editor";
+import { ProjectProvider, useProjectContext } from "@/components/project-provider";
+import { ProjectWelcome } from "@/components/project-welcome";
+import { EditorView } from "@/components/editor-view";
+
+// =============================================================================
+// Page Content (uses context)
+// =============================================================================
+
+function PageContent() {
+	const { project, isFileSystemSupported } = useProjectContext();
+
+	// Show welcome screen if no project is open
+	if (!project.isOpen) {
+		return (
+			<ProjectWelcome
+				isLoading={project.isLoading}
+				isSupported={isFileSystemSupported}
+				error={project.error}
+				onOpenProject={project.openProject}
+				onCreateNewProject={project.createNewProject}
+			/>
+		);
+	}
+
+	// Show editor view when project is open
+	return <EditorView />;
+}
+
+// =============================================================================
+// Page Component
+// =============================================================================
 
 export default function Home() {
 	return (
-		<div className="relative min-h-screen">
-			<Link
-				href="/settings"
-				className="fixed right-6 top-6 z-10"
-				aria-label="Open settings"
-			>
-				<Button
-					variant="ghost"
-					size="icon"
-					className="rounded-full opacity-50 transition-opacity hover:opacity-100"
-				>
-					<Settings className="h-[1.1rem] w-[1.1rem]" />
-				</Button>
-			</Link>
-
-			<main className="mx-auto flex min-h-screen max-w-3xl flex-col px-6 py-16 sm:px-8">
-				<NovelEditor />
-			</main>
-
-			<footer className="fixed bottom-4 left-1/2 -translate-x-1/2">
-				<p className="text-xs text-muted-foreground/60">
-					Press <kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">/</kbd> for commands
-				</p>
-			</footer>
-		</div>
+		<ProjectProvider>
+			<PageContent />
+		</ProjectProvider>
 	);
 }

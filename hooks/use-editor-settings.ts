@@ -52,7 +52,10 @@ export function useEditorSettings() {
 	// Apply tab size to document
 	useEffect(() => {
 		if (typeof document === "undefined") return;
-		document.documentElement.style.setProperty("--editor-tab-size", String(tabSize));
+		document.documentElement.style.setProperty(
+			"--editor-tab-size",
+			String(tabSize)
+		);
 	}, [tabSize]);
 
 	const updateFont = (value: FontValue) => {
@@ -73,4 +76,3 @@ export function useEditorSettings() {
 
 	return { font, tabSize, updateFont, updateTabSize };
 }
-
