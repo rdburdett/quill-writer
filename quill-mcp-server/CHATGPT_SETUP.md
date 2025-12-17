@@ -181,7 +181,12 @@ Add this to your MCP server before exposing:
 
 ```javascript
 // Add to server.js
-const API_KEY = process.env.MCP_API_KEY || 'your-secret-key';
+// Require API key - fail fast if not set (security best practice)
+if (!process.env.MCP_API_KEY) {
+  console.error('Error: MCP_API_KEY environment variable is required for API authentication');
+  process.exit(1);
+}
+const API_KEY = process.env.MCP_API_KEY;
 
 app.use((req, res, next) => {
   if (req.path.startsWith('/context/')) {

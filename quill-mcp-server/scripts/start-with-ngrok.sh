@@ -53,11 +53,13 @@ echo "Starting ngrok tunnel..."
 echo ""
 
 # Set up cleanup trap BEFORE starting ngrok (so it catches interrupts)
+# Preserve exit status to properly report ngrok errors
 cleanup() {
+	local exit_code=$?  # Capture exit status before cleanup operations
 	echo ""
 	echo "Cleaning up..."
 	kill $SERVER_PID 2>/dev/null || true
-	exit
+	exit $exit_code  # Preserve original exit status
 }
 trap cleanup INT TERM EXIT
 
