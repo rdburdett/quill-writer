@@ -1,0 +1,289 @@
+{
+	"openapi": "3.1.0",
+	"info": {
+		"title": "Quill MCP Server API",
+		"description": "API for accessing Quill Writer project context, Linear issues, file system, and git operations",
+		"version": "1.0.0"
+	},
+	"servers": [
+		{
+			"url": "https://your-ngrok-url.ngrok.io",
+			"description": "MCP Server (update with your ngrok URL)"
+		}
+	],
+	"paths": {
+		"/context/full": {
+			"get": {
+				"summary": "Get full project context",
+				"description": "Retrieves combined context including quill context, decisions, roadmap, and Linear issues",
+				"operationId": "getFullContext",
+				"responses": {
+					"200": {
+						"description": "Full context",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"quill": { "type": "string" },
+										"decisions": { "type": "array" },
+										"roadmap": { "type": "array" },
+										"linearIssues": { "type": "array" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/context/quill": {
+			"get": {
+				"summary": "Get Quill context capsule",
+				"description": "Retrieves the Quill Context Capsule markdown",
+				"operationId": "getQuillContext",
+				"responses": {
+					"200": {
+						"description": "Quill context",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"context": { "type": "string" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/linear/next": {
+			"get": {
+				"summary": "Get next unblocked Linear issue",
+				"description": "Retrieves the next unblocked Linear issue",
+				"operationId": "getNextLinearIssue",
+				"responses": {
+					"200": {
+						"description": "Next Linear issue",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": { "type": "string" },
+										"identifier": { "type": "string" },
+										"title": { "type": "string" },
+										"description": { "type": "string" },
+										"state": {
+											"type": "object",
+											"properties": {
+												"name": { "type": "string" }
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/linear/issues": {
+			"get": {
+				"summary": "Get Linear issues",
+				"description": "Retrieves active Linear issues",
+				"operationId": "getLinearIssues",
+				"parameters": [
+					{
+						"name": "state",
+						"in": "query",
+						"description": "Filter by state name",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "Linear issues",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"issues": { "type": "array" },
+										"count": { "type": "number" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/files/list": {
+			"get": {
+				"summary": "List repository files",
+				"description": "Lists files in the repository",
+				"operationId": "listFiles",
+				"parameters": [
+					{
+						"name": "path",
+						"in": "query",
+						"description": "Subdirectory path to list",
+						"required": false,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "File list",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"files": { "type": "array", "items": { "type": "string" } },
+										"count": { "type": "number" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/files/read": {
+			"get": {
+				"summary": "Read file content",
+				"description": "Reads file content by path",
+				"operationId": "readFile",
+				"parameters": [
+					{
+						"name": "path",
+						"in": "query",
+						"description": "File path relative to repo root",
+						"required": true,
+						"schema": {
+							"type": "string"
+						}
+					}
+				],
+				"responses": {
+					"200": {
+						"description": "File content",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"path": { "type": "string" },
+										"content": { "type": "string" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/files/diff": {
+			"post": {
+				"summary": "Preview file changes",
+				"description": "Proposes a diff without writing",
+				"operationId": "proposeDiff",
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"type": "object",
+								"required": ["path", "content"],
+								"properties": {
+									"path": { "type": "string" },
+									"content": { "type": "string" }
+								}
+							}
+						}
+					}
+				},
+				"responses": {
+					"200": {
+						"description": "Diff preview",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"path": { "type": "string" },
+										"oldContent": { "type": "string" },
+										"newContent": { "type": "string" },
+										"hasChanges": { "type": "boolean" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/decisions": {
+			"get": {
+				"summary": "Get decision log",
+				"description": "Retrieves all decision log entries",
+				"operationId": "getDecisions",
+				"responses": {
+					"200": {
+						"description": "Decision log",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"id": { "type": "string" },
+											"title": { "type": "string" },
+											"rationale": { "type": "string" },
+											"timestamp": { "type": "string" }
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		},
+		"/roadmap/next": {
+			"get": {
+				"summary": "Get next roadmap task",
+				"description": "Gets the next uncompleted roadmap task",
+				"operationId": "getNextRoadmapTask",
+				"responses": {
+					"200": {
+						"description": "Next task",
+						"content": {
+							"application/json": {
+								"schema": {
+									"type": "object",
+									"properties": {
+										"id": { "type": "string" },
+										"task": { "type": "string" },
+										"done": { "type": "boolean" }
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
