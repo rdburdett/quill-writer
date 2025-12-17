@@ -44,9 +44,15 @@ echo ""
 echo "Starting ngrok tunnel..."
 echo ""
 
-# Start ngrok
-ngrok http 5051
+# Set up cleanup trap BEFORE starting ngrok (so it catches interrupts)
+cleanup() {
+	echo ""
+	echo "Cleaning up..."
+	kill $SERVER_PID 2>/dev/null || true
+	exit
+}
+trap cleanup INT TERM EXIT
 
-# Cleanup on exit
-trap "kill $SERVER_PID 2>/dev/null; exit" INT TERM
+# Start ngrok (runs in foreground, blocking until interrupted)
+ngrok http 5051
 
