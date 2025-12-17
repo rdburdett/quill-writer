@@ -25,9 +25,10 @@ if lsof -Pi :5051 -sTCP:LISTEN -t >/dev/null ; then
 fi
 
 # Start MCP server in background
+# Run node directly to capture the actual server process PID (not npm's PID)
 echo "Starting MCP server..."
 cd "$SERVER_DIR"
-npm start &
+node server.js &
 SERVER_PID=$!
 
 # Wait for server to start
@@ -36,6 +37,13 @@ sleep 2
 # Check if server started successfully
 if ! kill -0 $SERVER_PID 2>/dev/null; then
 	echo "Error: Failed to start MCP server"
+	exit 1
+fi
+
+# Verify server is actually listening on port 5051
+if ! lsof -Pi :5051 -sTCP:LISTEN -t >/dev/null ; then
+	echo "Error: Server started but not listening on port 5051"
+	kill $SERVER_PID 2>/dev/null || true
 	exit 1
 fi
 
