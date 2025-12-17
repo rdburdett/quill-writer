@@ -478,11 +478,21 @@ Before writing any code:
 
 ### ChatGPT Integration
 
-When using ChatGPT with MCP tools, the server provides:
-- Controlled access to your repository
-- Safety checks to prevent accidental changes
-- Context loading for consistent behavior
-- Linear issue integration for task management
+**See [CHATGPT_SETUP.md](./CHATGPT_SETUP.md) for complete setup instructions.**
+
+ChatGPT doesn't natively support MCP servers. To connect ChatGPT:
+
+1. **Create a Custom GPT** with API actions (recommended)
+2. **Expose server via ngrok** for ChatGPT to access
+3. **Use manual context sharing** for one-off conversations
+
+Quick start:
+```bash
+# Start server with ngrok
+./scripts/start-with-ngrok.sh
+```
+
+Then create a Custom GPT using the OpenAPI schema in `openapi-schema.json`.
 
 ### Example Workflow
 
