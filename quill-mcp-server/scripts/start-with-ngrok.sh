@@ -59,6 +59,8 @@ cleanup() {
 	echo ""
 	echo "Cleaning up..."
 	kill $SERVER_PID 2>/dev/null || true
+	# Remove trap to prevent recursion when calling exit
+	trap - INT TERM EXIT
 	exit $exit_code  # Preserve original exit status
 }
 trap cleanup INT TERM EXIT
