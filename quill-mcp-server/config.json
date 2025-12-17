@@ -1,0 +1,14 @@
+{
+	"safety": {
+		"mode": "ask_before_write",
+		"protectedBranches": ["main", "master"],
+		"protectedPaths": [".env*", ".git/*", "node_modules/*", "*.log", "pnpm-lock.yaml", "package-lock.json", "yarn.lock"]
+	},
+	"repo": {
+		"root": "../"
+	},
+	"linear": {
+		"enabled": true
+	}
+}
+

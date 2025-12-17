@@ -1,0 +1,6 @@
+Before writing any code:
+1. Call GET http://localhost:5051/context/full to load project context
+2. Call GET http://localhost:5051/linear/next to get the next task (if Linear is enabled)
+3. Review decisions and roadmap before making changes
+4. Always create a branch before writing files
+5. Use POST /files/diff to preview changes before writing

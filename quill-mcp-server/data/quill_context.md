@@ -1,7 +1,5 @@
 # Quill Writer Context Capsule
 
- 
-
 This document contains the authoritative context about the Quill Writer project.
 
 ## Project Overview
