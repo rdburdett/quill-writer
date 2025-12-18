@@ -247,6 +247,14 @@
   font-family: var(--font-jetbrains), monospace;
 }
 
+[data-editor-font="ubuntu"] .ProseMirror {
+  font-family: var(--font-ubuntu), monospace;
+}
+
+[data-editor-font="mono2"] .ProseMirror {
+  font-family: var(--font-ubuntu-mono), monospace;
+}
+
 .ProseMirror h1 {
   @apply text-3xl font-bold mt-6 mb-4;
 }

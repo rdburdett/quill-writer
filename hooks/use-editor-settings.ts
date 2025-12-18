@@ -8,11 +8,24 @@ export const fonts = [
 	{ value: "merriweather", label: "Merriweather" },
 	{ value: "inter", label: "Inter" },
 	{ value: "mono", label: "JetBrains Mono" },
+	{ value: "ubuntu", label: "Ubuntu" },
+	{ value: "mono2", label: "Ubuntu Mono" },
 ] as const;
 
 export const tabSizes = [2, 4, 8] as const;
 
 export type FontValue = (typeof fonts)[number]["value"];
+
+// Centralized font family mappings
+export const fontFamilyMap: Record<FontValue, string> = {
+	system: "var(--font-geist-sans), system-ui, sans-serif",
+	serif: "var(--font-lora), Georgia, serif",
+	merriweather: "var(--font-merriweather), Georgia, serif",
+	inter: "var(--font-inter), system-ui, sans-serif",
+	mono: "var(--font-jetbrains), monospace",
+	ubuntu: "var(--font-ubuntu), monospace",
+	mono2: "var(--font-ubuntu-mono), monospace",
+};
 export type TabSize = (typeof tabSizes)[number];
 
 const STORAGE_KEY_FONT = "editor.font";

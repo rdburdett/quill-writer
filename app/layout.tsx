@@ -6,6 +6,8 @@ import {
 	Merriweather,
 	Inter,
 	JetBrains_Mono,
+	Ubuntu,
+	Ubuntu_Mono,
 } from "next/font/google";
 import "./globals.css";
 import { AppThemeProvider } from "@/components/theme-provider";
@@ -42,6 +44,18 @@ const jetbrainsMono = JetBrains_Mono({
 	subsets: ["latin"],
 });
 
+const ubuntu = Ubuntu({
+	variable: "--font-ubuntu",
+	subsets: ["latin"],
+	weight: ["300", "400", "500", "700"],
+});
+
+const ubuntuMono = Ubuntu_Mono({
+	variable: "--font-ubuntu-mono",
+	subsets: ["latin"],
+	weight: ["400", "700"],
+});
+
 export const metadata: Metadata = {
 	title: "Quill",
 	description:
@@ -63,7 +77,9 @@ export default function RootLayout({
 					lora.variable,
 					merriweather.variable,
 					inter.variable,
-					jetbrainsMono.variable
+					jetbrainsMono.variable,
+					ubuntu.variable,
+					ubuntuMono.variable
 				)}
 			>
 				<AppThemeProvider>{children}</AppThemeProvider>
