@@ -234,7 +234,7 @@ export function EditorView() {
 	return (
 		<div className="flex h-screen">
 			{/* Sidebar */}
-			<div className="w-64 flex-shrink-0">
+			<div className="w-64 shrink-0">
 				<FolderSidebar
 					tree={folderTree.filteredTree}
 					selectedPath={folderTree.selectedPath}

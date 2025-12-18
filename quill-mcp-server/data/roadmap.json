@@ -1,17 +1,8 @@
 [
 	{
-		"id": "browser-001",
-		"task": "Implement file browser collapsible behavior",
-		"done": false
-	},
-	{
-		"id": "browser-002",
-		"task": "Add drag handles to file items",
-		"done": false
-	},
-	{
-		"id": "arrange-001",
-		"task": "Initial arrangement column layout",
-		"done": false
+		"id": "decision-typography-001",
+		"title": "Centralized font registration and configuration",
+		"rationale": "Fonts in Quill should be registered in a single, centralized configuration rather than inline or per-component. UI font selectors should read from this configuration, and applying a font should rely on predictable class or style application without DOM mutation. This ensures consistency, easy extension (e.g., adding Ubuntu Mono), and prevents ad-hoc font loading patterns from emerging.",
+		"timestamp": "AUTO"
 	}
 ]

@@ -8,22 +8,17 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { useEditorSettingsContext } from "@/components/theme-provider";
-import type { FontValue } from "@/hooks/use-editor-settings";
-
-const fontFamilyMap: Record<FontValue, string> = {
-	system: "var(--font-geist-sans), system-ui, sans-serif",
-	serif: "var(--font-lora), Georgia, serif",
-	merriweather: "var(--font-merriweather), Georgia, serif",
-	inter: "var(--font-inter), system-ui, sans-serif",
-	mono: "var(--font-jetbrains), monospace",
-};
+import { fontFamilyMap, type FontValue } from "@/hooks/use-editor-settings";
 
 export function FontSelector() {
 	const { font, fonts, updateFont } = useEditorSettingsContext();
 
 	return (
 		<div className="flex flex-col gap-3">
-			<Select value={font} onValueChange={(v) => updateFont(v as FontValue)}>
+			<Select
+				value={font}
+				onValueChange={(v) => updateFont(v as FontValue)}
+			>
 				<SelectTrigger className="w-[180px]">
 					<SelectValue placeholder="Select font" />
 				</SelectTrigger>
@@ -44,5 +39,3 @@ export function FontSelector() {
 		</div>
 	);
 }
-
-
