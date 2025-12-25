@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
 	Folder,
 	FolderOpen,
@@ -12,10 +12,14 @@ import {
 	FilePlus,
 	Pencil,
 	RefreshCw,
+	PanelLeftClose,
+	PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FolderNode } from "@/lib/project/types";
 import { Button } from "@/components/ui/button";
+import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import type { TextDragData } from "@/components/tab-system";
 
 // =============================================================================
 // Types
@@ -32,6 +36,10 @@ export interface FolderSidebarProps {
 	searchQuery: string;
 	/** Whether a file is currently saving */
 	isSaving?: boolean;
+	/** Whether the sidebar is collapsed */
+	isCollapsed?: boolean;
+	/** Called when collapse/expand is toggled */
+	onToggleCollapse?: () => void;
 	/** Called when a file is selected */
 	onSelect: (path: string) => void;
 	/** Called when a folder is toggled */
@@ -46,6 +54,8 @@ export interface FolderSidebarProps {
 	onNewFolder?: (parentPath: string) => void;
 	/** Called when renaming a file */
 	onRenameFile?: (filePath: string, currentName: string) => void;
+	/** Called when text is dropped on a file */
+	onDropText?: (filePath: string, dragData: TextDragData) => void;
 }
 
 // =============================================================================
@@ -58,6 +68,8 @@ export function FolderSidebar({
 	expandedPaths,
 	searchQuery,
 	isSaving,
+	isCollapsed = false,
+	onToggleCollapse,
 	onSelect,
 	onToggleFolder,
 	onSearchChange,
@@ -65,14 +77,54 @@ export function FolderSidebar({
 	onNewFile,
 	onNewFolder,
 	onRenameFile,
+	onDropText,
 }: FolderSidebarProps) {
 	const [hoveredPath, setHoveredPath] = useState<string | null>(null);
 
+	// If collapsed, show only header with expand icon
+	if (isCollapsed) {
+		return (
+			<div className="flex h-full flex-col border-r border-border bg-muted/30 transition-all">
+				{/* Header */}
+				<div className="flex items-center justify-between border-b border-border px-3 py-2">
+					<div className="flex items-center gap-2">
+						{onToggleCollapse && (
+							<Button
+								variant="ghost"
+								size="icon"
+								className="h-6 w-6"
+								onClick={onToggleCollapse}
+								title="Expand sidebar"
+								aria-label="Expand sidebar"
+							>
+								<PanelLeftOpen className="h-3.5 w-3.5" />
+							</Button>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	return (
-		<div className="flex h-full flex-col border-r border-border bg-muted/30">
+		<div className="flex h-full flex-col border-r border-border bg-muted/30 transition-all">
 			{/* Header */}
 			<div className="flex items-center justify-between border-b border-border px-3 py-2">
-				<span className="text-sm font-medium text-foreground">Files</span>
+				<div className="flex items-center gap-2">
+					<span className="text-sm font-medium text-foreground">Files</span>
+					{onToggleCollapse && (
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-6 w-6"
+							onClick={onToggleCollapse}
+							title="Collapse sidebar"
+							aria-label="Collapse sidebar"
+						>
+							<PanelLeftClose className="h-3.5 w-3.5" />
+						</Button>
+					)}
+				</div>
 				<div className="flex items-center gap-1">
 					{isSaving && (
 						<span className="text-xs text-muted-foreground animate-pulse">
@@ -156,6 +208,7 @@ export function FolderSidebar({
 						onNewFile={onNewFile}
 						onNewFolder={onNewFolder}
 						onRenameFile={onRenameFile}
+						onDropText={onDropText}
 					/>
 				)}
 			</div>
@@ -184,6 +237,7 @@ interface TreeNodesProps {
 	onNewFile?: (folderPath: string) => void;
 	onNewFolder?: (parentPath: string) => void;
 	onRenameFile?: (filePath: string, currentName: string) => void;
+	onDropText?: (filePath: string, dragData: TextDragData) => void;
 }
 
 function TreeNodes({
@@ -198,6 +252,7 @@ function TreeNodes({
 	onNewFile,
 	onNewFolder,
 	onRenameFile,
+	onDropText,
 }: TreeNodesProps) {
 	return (
 		<>
@@ -215,6 +270,7 @@ function TreeNodes({
 					onNewFile={onNewFile}
 					onNewFolder={onNewFolder}
 					onRenameFile={onRenameFile}
+					onDropText={onDropText}
 					expandedPaths={expandedPaths}
 					selectedPath={selectedPath}
 					hoveredPath={hoveredPath}
@@ -243,6 +299,7 @@ interface TreeNodeProps {
 	onNewFile?: (folderPath: string) => void;
 	onNewFolder?: (parentPath: string) => void;
 	onRenameFile?: (filePath: string, currentName: string) => void;
+	onDropText?: (filePath: string, dragData: TextDragData) => void;
 }
 
 function TreeNode({
@@ -260,10 +317,65 @@ function TreeNode({
 	onNewFile,
 	onNewFolder,
 	onRenameFile,
+	onDropText,
 }: TreeNodeProps) {
 	const isFolder = node.type === "folder";
 	const hasChildren = isFolder && node.children && node.children.length > 0;
 	const paddingLeft = 12 + depth * 16;
+	const nodeRef = useRef<HTMLDivElement>(null);
+	const [isDragOver, setIsDragOver] = useState(false);
+
+	// Set up drop target for file nodes only
+	useEffect(() => {
+		const element = nodeRef.current;
+		if (!element || isFolder || !onDropText) return;
+
+		let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
+
+		return dropTargetForElements({
+			element,
+			getData: ({ source }) => {
+				if (source.data.type === "text-block") {
+					return source.data as unknown as Record<string, unknown>;
+				}
+				return {};
+			},
+			canDrop: ({ source }) => {
+				return source.data.type === "text-block";
+			},
+			onDragEnter: ({ source }) => {
+				console.log("[FolderSidebar] Drag enter on file:", node.path, "Source:", source.data);
+				setIsDragOver(true);
+				// Open file after a short delay when hovering (to avoid flickering)
+				if (source.data.type === "text-block") {
+					hoverTimeout = setTimeout(() => {
+						if (!isFolder) {
+							console.log("[FolderSidebar] Opening file:", node.path);
+							onSelect(node.path);
+						}
+					}, 300); // 300ms delay before opening
+				}
+			},
+			onDragLeave: () => {
+				setIsDragOver(false);
+				if (hoverTimeout) {
+					clearTimeout(hoverTimeout);
+					hoverTimeout = null;
+				}
+			},
+			onDrop: ({ source }) => {
+				setIsDragOver(false);
+				if (hoverTimeout) {
+					clearTimeout(hoverTimeout);
+					hoverTimeout = null;
+				}
+				if (source.data.type === "text-block" && onDropText) {
+					const dragData = source.data as unknown as TextDragData;
+					onDropText(node.path, dragData);
+				}
+			},
+		});
+	}, [node.path, isFolder, onDropText, onSelect]);
 
 	const handleClick = useCallback(() => {
 		if (isFolder) {
@@ -286,6 +398,7 @@ function TreeNode({
 	return (
 		<div>
 			<div
+				ref={nodeRef}
 				role="treeitem"
 				tabIndex={0}
 				aria-selected={isSelected}
@@ -294,7 +407,8 @@ function TreeNode({
 					"group flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm transition-colors",
 					"hover:bg-accent/50",
 					isSelected && "bg-accent text-accent-foreground",
-					!isSelected && "text-foreground/80"
+					!isSelected && "text-foreground/80",
+					isDragOver && !isFolder && "bg-primary/20 border-l-4 border-l-primary shadow-sm"
 				)}
 				style={{ paddingLeft }}
 				onClick={handleClick}

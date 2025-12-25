@@ -121,39 +121,51 @@ async function scanDirectoryRecursive(
 				continue;
 			}
 
-			const subDirHandle = await directoryHandle.getDirectoryHandle(name);
-			const children = await scanDirectoryRecursive(
-				subDirHandle,
-				path,
-				extensions,
-				ignoredDirs,
-				maxDepth,
-				includeHidden,
-				currentDepth + 1
-			);
+			try {
+				const subDirHandle = await directoryHandle.getDirectoryHandle(name);
+				const children = await scanDirectoryRecursive(
+					subDirHandle,
+					path,
+					extensions,
+					ignoredDirs,
+					maxDepth,
+					includeHidden,
+					currentDepth + 1
+				);
 
-			// Only include folders that have content or are empty but user-created
-			folders.push({
-				name,
-				path,
-				type: "folder",
-				children,
-			});
+				// Only include folders that have content or are empty but user-created
+				folders.push({
+					name,
+					path,
+					type: "folder",
+					children,
+				});
+			} catch (error) {
+				// Skip directories we can't access (permission denied, etc.)
+				console.warn(`[Quill Scanner] Cannot access directory "${path}":`, error);
+				continue;
+			}
 		} else if (entry.kind === "file") {
 			// Check file extension
 			const ext = getFileExtension(name);
 			if (extensions.includes(ext)) {
-				const fileHandle = await directoryHandle.getFileHandle(name);
-				const file = await fileHandle.getFile();
-				const content = await file.text();
+				try {
+					const fileHandle = await directoryHandle.getFileHandle(name);
+					const file = await fileHandle.getFile();
+					const content = await file.text();
 
-				files.push({
-					name,
-					path,
-					type: "file",
-					wordCount: countWords(content),
-					lastModified: file.lastModified,
-				});
+					files.push({
+						name,
+						path,
+						type: "file",
+						wordCount: countWords(content),
+						lastModified: file.lastModified,
+					});
+				} catch (error) {
+					// Skip files we can't access (permission denied, locked, etc.)
+					console.warn(`[Quill Scanner] Cannot access file "${path}":`, error);
+					continue;
+				}
 			}
 		}
 	}

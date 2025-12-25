@@ -205,6 +205,48 @@ export async function loadAllBlocks(
 }
 
 // =============================================================================
+// Text Operations (for drag and drop)
+// =============================================================================
+
+/**
+ * Insert text at a specific position in a file
+ * Returns the updated content (for use with auto-saver)
+ */
+export async function insertTextAtPosition(
+	directoryHandle: FileSystemDirectoryHandle,
+	filePath: string,
+	text: string,
+	position: number
+): Promise<string> {
+	const { readTextFile } = await import("@/lib/filesystem");
+	const content = await readTextFile(directoryHandle, filePath);
+	
+	// Insert text at position
+	const before = content.slice(0, position);
+	const after = content.slice(position);
+	return before + text + after;
+}
+
+/**
+ * Remove text from a specific range in a file
+ * Returns the updated content (for use with auto-saver)
+ */
+export async function removeTextFromRange(
+	directoryHandle: FileSystemDirectoryHandle,
+	filePath: string,
+	from: number,
+	to: number
+): Promise<string> {
+	const { readTextFile } = await import("@/lib/filesystem");
+	const content = await readTextFile(directoryHandle, filePath);
+	
+	// Remove text from range
+	const before = content.slice(0, from);
+	const after = content.slice(to);
+	return before + after;
+}
+
+// =============================================================================
 // Block CRUD Operations
 // =============================================================================
 

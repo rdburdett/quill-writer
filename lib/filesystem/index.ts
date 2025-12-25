@@ -153,16 +153,26 @@ export async function readTextFile(
 		throw new Error("Invalid file path");
 	}
 
-	// Navigate to the parent directory
-	let currentHandle = directoryHandle;
-	for (const part of parts) {
-		currentHandle = await currentHandle.getDirectoryHandle(part);
-	}
+	try {
+		// Navigate to the parent directory
+		let currentHandle = directoryHandle;
+		for (const part of parts) {
+			currentHandle = await currentHandle.getDirectoryHandle(part);
+		}
 
-	// Get the file
-	const fileHandle = await currentHandle.getFileHandle(fileName);
-	const file = await fileHandle.getFile();
-	return await file.text();
+		// Get the file
+		const fileHandle = await currentHandle.getFileHandle(fileName);
+		const file = await fileHandle.getFile();
+		return await file.text();
+	} catch (error) {
+		if (error instanceof Error && error.name === "NotFoundError") {
+			throw new Error(`File not found: ${relativePath}`);
+		}
+		if (error instanceof Error && error.name === "NotAllowedError") {
+			throw new Error(`Permission denied: Cannot read file "${relativePath}". Please grant read access to this folder.`);
+		}
+		throw new Error(`Failed to read file "${relativePath}": ${error instanceof Error ? error.message : String(error)}`);
+	}
 }
 
 /**
@@ -180,17 +190,27 @@ export async function writeTextFile(
 		throw new Error("Invalid file path");
 	}
 
-	// Navigate/create parent directories
-	let currentHandle = directoryHandle;
-	for (const part of parts) {
-		currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
-	}
+	try {
+		// Navigate/create parent directories
+		let currentHandle = directoryHandle;
+		for (const part of parts) {
+			currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+		}
 
-	// Create/overwrite the file
-	const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
-	const writable = await fileHandle.createWritable();
-	await writable.write(content);
-	await writable.close();
+		// Create/overwrite the file
+		const fileHandle = await currentHandle.getFileHandle(fileName, { create: true });
+		const writable = await fileHandle.createWritable();
+		await writable.write(content);
+		await writable.close();
+	} catch (error) {
+		if (error instanceof Error && error.name === "NotAllowedError") {
+			throw new Error(`Permission denied: Cannot write file "${relativePath}". Please grant write access to this folder.`);
+		}
+		if (error instanceof Error && error.name === "QuotaExceededError") {
+			throw new Error(`Storage quota exceeded: Cannot write file "${relativePath}".`);
+		}
+		throw new Error(`Failed to write file "${relativePath}": ${error instanceof Error ? error.message : String(error)}`);
+	}
 }
 
 /**
@@ -222,14 +242,24 @@ export async function deleteFile(
 		throw new Error("Invalid file path");
 	}
 
-	// Navigate to the parent directory
-	let currentHandle = directoryHandle;
-	for (const part of parts) {
-		currentHandle = await currentHandle.getDirectoryHandle(part);
-	}
+	try {
+		// Navigate to the parent directory
+		let currentHandle = directoryHandle;
+		for (const part of parts) {
+			currentHandle = await currentHandle.getDirectoryHandle(part);
+		}
 
-	// Remove the file
-	await currentHandle.removeEntry(fileName);
+		// Remove the file
+		await currentHandle.removeEntry(fileName);
+	} catch (error) {
+		if (error instanceof Error && error.name === "NotFoundError") {
+			throw new Error(`File not found: ${relativePath}`);
+		}
+		if (error instanceof Error && error.name === "NotAllowedError") {
+			throw new Error(`Permission denied: Cannot delete file "${relativePath}". Please grant write access to this folder.`);
+		}
+		throw new Error(`Failed to delete file "${relativePath}": ${error instanceof Error ? error.message : String(error)}`);
+	}
 }
 
 /**
@@ -263,12 +293,19 @@ export async function createDirectory(
 ): Promise<FileSystemDirectoryHandle> {
 	const parts = relativePath.split("/").filter(Boolean);
 	
-	let currentHandle = directoryHandle;
-	for (const part of parts) {
-		currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+	try {
+		let currentHandle = directoryHandle;
+		for (const part of parts) {
+			currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+		}
+		
+		return currentHandle;
+	} catch (error) {
+		if (error instanceof Error && error.name === "NotAllowedError") {
+			throw new Error(`Permission denied: Cannot create directory "${relativePath}". Please grant write access to this folder.`);
+		}
+		throw new Error(`Failed to create directory "${relativePath}": ${error instanceof Error ? error.message : String(error)}`);
 	}
-	
-	return currentHandle;
 }
 
 /**
@@ -285,14 +322,24 @@ export async function deleteDirectory(
 		throw new Error("Invalid directory path");
 	}
 
-	// Navigate to the parent directory
-	let currentHandle = directoryHandle;
-	for (const part of parts) {
-		currentHandle = await currentHandle.getDirectoryHandle(part);
-	}
+	try {
+		// Navigate to the parent directory
+		let currentHandle = directoryHandle;
+		for (const part of parts) {
+			currentHandle = await currentHandle.getDirectoryHandle(part);
+		}
 
-	// Remove the directory recursively
-	await currentHandle.removeEntry(dirName, { recursive: true });
+		// Remove the directory recursively
+		await currentHandle.removeEntry(dirName, { recursive: true });
+	} catch (error) {
+		if (error instanceof Error && error.name === "NotFoundError") {
+			throw new Error(`Directory not found: ${relativePath}`);
+		}
+		if (error instanceof Error && error.name === "NotAllowedError") {
+			throw new Error(`Permission denied: Cannot delete directory "${relativePath}". Please grant write access to this folder.`);
+		}
+		throw new Error(`Failed to delete directory "${relativePath}": ${error instanceof Error ? error.message : String(error)}`);
+	}
 }
 
 /**
@@ -309,20 +356,30 @@ export async function getFileMetadata(
 		throw new Error("Invalid file path");
 	}
 
-	// Navigate to the parent directory
-	let currentHandle = directoryHandle;
-	for (const part of parts) {
-		currentHandle = await currentHandle.getDirectoryHandle(part);
-	}
+	try {
+		// Navigate to the parent directory
+		let currentHandle = directoryHandle;
+		for (const part of parts) {
+			currentHandle = await currentHandle.getDirectoryHandle(part);
+		}
 
-	// Get the file
-	const fileHandle = await currentHandle.getFileHandle(fileName);
-	const file = await fileHandle.getFile();
-	
-	return {
-		lastModified: file.lastModified,
-		size: file.size,
-	};
+		// Get the file
+		const fileHandle = await currentHandle.getFileHandle(fileName);
+		const file = await fileHandle.getFile();
+		
+		return {
+			lastModified: file.lastModified,
+			size: file.size,
+		};
+	} catch (error) {
+		if (error instanceof Error && error.name === "NotFoundError") {
+			throw new Error(`File not found: ${relativePath}`);
+		}
+		if (error instanceof Error && error.name === "NotAllowedError") {
+			throw new Error(`Permission denied: Cannot access file "${relativePath}". Please grant read access to this folder.`);
+		}
+		throw new Error(`Failed to get metadata for file "${relativePath}": ${error instanceof Error ? error.message : String(error)}`);
+	}
 }
 
 // =============================================================================
