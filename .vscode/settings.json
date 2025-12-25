@@ -1,0 +1,48 @@
+{
+	// Markdown preview settings
+	"markdown.preview.breaks": true,
+	"markdown.preview.fontSize": 14,
+	"markdown.preview.lineHeight": 1.6,
+	"markdown.preview.markEditorSelection": true,
+	
+	// Use the custom CSS file for markdown preview
+	"markdown.styles": [
+		".vscode/markdown-preview.css"
+	],
+	
+	// Editor settings for markdown files
+	"[markdown]": {
+		"editor.wordWrap": "on",
+		"editor.quickSuggestions": {
+			"comments": "off",
+			"strings": "off",
+			"other": "off"
+		},
+		"editor.formatOnSave": false
+	},
+	
+	// File associations - explicitly set markdown
+	"files.associations": {
+		"*.md": "markdown",
+		"*.markdown": "markdown"
+	},
+	
+	// Ensure markdown files are always treated as markdown
+	"files.exclude": {},
+	"search.exclude": {},
+	
+	// Language-specific settings
+	"[markdown]": {
+		"editor.defaultFormatter": null,
+		"editor.formatOnSave": false,
+		"editor.wordWrap": "on",
+		"editor.quickSuggestions": {
+			"comments": "off",
+			"strings": "off",
+			"other": "off"
+		}
+	}
+}
+
+
+

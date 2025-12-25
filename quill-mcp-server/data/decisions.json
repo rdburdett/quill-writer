@@ -1,8 +1,86 @@
-[]
-
-
-
-
-
-
-
+[
+	{
+		"id": "decision-typography-001",
+		"title": "Centralized font registration and configuration",
+		"category": "ui",
+		"rationale": "Fonts in Quill should be registered in a single, centralized configuration rather than inline or per-component. UI font selectors should read from this configuration, and applying a font should rely on predictable class or style application without DOM mutation. This ensures consistency, easy extension (e.g., adding Ubuntu Mono), and prevents ad-hoc font loading patterns from emerging.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-ui-001",
+		"title": "Use shadcn/ui + Tailwind for all UI components",
+		"category": "ui",
+		"rationale": "shadcn/ui provides composable, accessible React components built on Radix primitives with Tailwind styling. This avoids CSS-in-JS runtime costs, keeps styling consistent, and enables rapid development. Components are copied into the project, allowing full customization without version lock-in.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-editor-001",
+		"title": "Use Novel (Tiptap-based) as the core editor",
+		"category": "editor",
+		"rationale": "Novel provides a Notion-like editing experience with draggable blocks, slash commands, and grab handles out of the box. It's built on Tiptap (ProseMirror) which is battle-tested for rich text editing. The editor remains distraction-free with minimal UI chrome.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-mobile-001",
+		"title": "Use Capacitor for iOS App Store distribution",
+		"category": "architecture",
+		"rationale": "Capacitor wraps the Next.js web app in a native iOS WebView container, providing the fastest path to the App Store without rewriting UI in React Native. The responsive web UI already feels mobile-native. Native features (file picker, share sheet, offline caching) are accessible via Capacitor plugins. This mirrors Notion's hybrid approach.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-arch-001",
+		"title": "Separation of logic and UI layers",
+		"category": "architecture",
+		"rationale": "Logic (data models, CRDT sync, metadata extraction, embeddings) should live in shared packages separate from UI components. This enables future code sharing between web and mobile apps, and keeps the codebase navigable. UI lives in apps/, business logic in packages/.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-arch-002",
+		"title": "Monorepo structure for future scalability",
+		"category": "architecture",
+		"rationale": "Structure: apps/web (Next.js), apps/mobile (Capacitor), packages/core (CRDT, document models), packages/ui (shadcn components), packages/lib (utilities). Uses pnpm workspaces + TypeScript project references. This pattern is used by Notion, Linear, Vercel and scales cleanly.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-dnd-001",
+		"title": "Use Pragmatic Drag & Drop for drag-and-drop",
+		"category": "ui",
+		"rationale": "Drag-and-drop is central to the modular writing experience. Either @atlaskit/pragmatic-drag-and-drop provides composable, accessible drag-and-drop primitives. Blocks can move between editor, sidebar buckets, chapters, and scenes fluidly.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-backend-001",
+		"title": "Neon + pgvector for storage and embeddings",
+		"category": "backend",
+		"rationale": "Neon provides serverless Postgres with pgvector extension for vector similarity search. This enables semantic search over blocks/ideas using embeddings. Combined with Supabase auth for user management and TRPC/Next Route Handlers for API layer.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-state-001",
+		"title": "Use Zustand or Context API for client-side state",
+		"category": "architecture",
+		"rationale": "A central store unifies file data, scene structure, editor state, and preview selection. Zustand is lightweight and works well with React. Avoids prop drilling while keeping state predictable and debuggable.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-ux-001",
+		"title": "Keep the writer's canvas sacred - no UI clutter",
+		"category": "ux",
+		"rationale": "The main editor should never be polluted with side metadata, tags, categories, or analytics. All power features live in the sidebar and command palette. Writers stay 'in flow' while the system handles structure underneath. This is the 'Dual-Surface Writing UX' principle.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-responsive-001",
+		"title": "Mobile-first responsive design with Tailwind breakpoints",
+		"category": "ui",
+		"rationale": "The app degrades gracefully from desktop (lg) to tablet (md) to mobile (sm/xs). Sidebars collapse into hamburger menus, editor becomes full-screen on mobile. Uses Tailwind breakpoints consistently. This makes the Capacitor-wrapped app feel native on phones.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-filesystem-001",
+		"title": "Use File System Access API for local file management",
+		"category": "architecture",
+		"rationale": "The File System Access API allows the web app to read/write files directly on the user's local filesystem with their permission. This provides a desktop-app-like experience for managing writing projects without requiring a backend for MVP.",
+		"timestamp": "2024-12-19"
+	}
+]
