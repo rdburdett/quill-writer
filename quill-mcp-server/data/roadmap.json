@@ -1,8 +1,202 @@
-[
-	{
-		"id": "decision-typography-001",
-		"title": "Centralized font registration and configuration",
-		"rationale": "Fonts in Quill should be registered in a single, centralized configuration rather than inline or per-component. UI font selectors should read from this configuration, and applying a font should rely on predictable class or style application without DOM mutation. This ensures consistency, easy extension (e.g., adding Ubuntu Mono), and prevents ad-hoc font loading patterns from emerging.",
-		"timestamp": "AUTO"
-	}
-]
+{
+	"version": "1.0",
+	"lastUpdated": "2024-12-19",
+	"phases": [
+		{
+			"id": "phase-1",
+			"name": "Foundation (MVP Core)",
+			"status": "in-progress",
+			"description": "Establish clean architecture, core editor experience, and local file persistence",
+			"milestones": [
+				{
+					"id": "m1-1",
+					"title": "Clean React-based UI architecture",
+					"description": "Organize components, hooks, types into well-defined folders. No inline CSS, rely on Tailwind + shadcn/ui",
+					"status": "done"
+				},
+				{
+					"id": "m1-2",
+					"title": "File Browser (Folder Sidebar)",
+					"description": "Collapsible folder tree with File System Access API support, drag-and-drop reorganization, metadata display",
+					"status": "done"
+				},
+				{
+					"id": "m1-3",
+					"title": "Novel Editor Integration",
+					"description": "Tiptap-based editor with draggable blocks, slash commands, grab handles, minimal UI chrome",
+					"status": "done"
+				},
+				{
+					"id": "m1-4",
+					"title": "Tab System for Multi-File Editing",
+					"description": "Browser-style tabs for opening and switching between multiple files",
+					"status": "done"
+				},
+				{
+					"id": "m1-5",
+					"title": "Theme System with Subthemes",
+					"description": "Dark/light modes with customizable editor subthemes for focused writing",
+					"status": "done"
+				},
+				{
+					"id": "m1-6",
+					"title": "Responsive Layout Handling",
+					"description": "Mobile, tablet, desktop breakpoints with collapsible panels",
+					"status": "in-progress"
+				},
+				{
+					"id": "m1-7",
+					"title": "Settings Page",
+					"description": "Font selection, tab size, editor preferences",
+					"status": "done"
+				}
+			]
+		},
+		{
+			"id": "phase-2",
+			"name": "Writing Workspace",
+			"status": "planned",
+			"description": "Build the modular writing experience with sidebar organization and arrangement view",
+			"milestones": [
+				{
+					"id": "m2-1",
+					"title": "Workspace Sidebar",
+					"description": "Toggle-able sidebar containing Ideas bucket, Chapters list, and Scenes hierarchy. Items are draggable",
+					"status": "planned"
+				},
+				{
+					"id": "m2-2",
+					"title": "Idea Buckets",
+					"description": "Drag-and-drop space for loose thoughts. Extract blocks from editor to bucket, drag back when ready",
+					"status": "planned"
+				},
+				{
+					"id": "m2-3",
+					"title": "Arrangement View",
+					"description": "Vertical timeline-like layout for blocks/scenes with drag-and-drop reordering. Like a DAW arrangement",
+					"status": "planned"
+				},
+				{
+					"id": "m2-4",
+					"title": "Block Extraction to Cards",
+					"description": "Shift-drag or context menu to send editor blocks to Ideas bucket as cards",
+					"status": "planned"
+				},
+				{
+					"id": "m2-5",
+					"title": "Command Palette",
+					"description": "Notion/Cursor-like search window for ideas, scenes, characters, places, plot threads",
+					"status": "planned"
+				},
+				{
+					"id": "m2-6",
+					"title": "Chapters & Scenes Structure",
+					"description": "Named containers with ordered blocks, collapsible, metadata-rich",
+					"status": "planned"
+				}
+			]
+		},
+		{
+			"id": "phase-3",
+			"name": "Intelligence Layer",
+			"status": "planned",
+			"description": "Add AI-powered metadata extraction, embeddings, and smart search",
+			"milestones": [
+				{
+					"id": "m3-1",
+					"title": "Auto-Generated Metadata Extraction",
+					"description": "Extract characters, settings, tone, plot-phase classification, POV from blocks automatically",
+					"status": "planned"
+				},
+				{
+					"id": "m3-2",
+					"title": "Embeddings Pipeline",
+					"description": "Background API route generates embeddings on block create/update. Store in pgvector",
+					"status": "planned"
+				},
+				{
+					"id": "m3-3",
+					"title": "Smart Search with Embeddings",
+					"description": "Semantic search: 'show all fragments involving character X in a tense scene'",
+					"status": "planned"
+				},
+				{
+					"id": "m3-4",
+					"title": "AI Organization Tools",
+					"description": "Auto-grouping similar ideas, structure suggestions, continuity detection",
+					"status": "planned"
+				}
+			]
+		},
+		{
+			"id": "phase-4",
+			"name": "Mobile & Distribution",
+			"status": "planned",
+			"description": "Package for iOS App Store using Capacitor wrapper",
+			"milestones": [
+				{
+					"id": "m4-1",
+					"title": "Capacitor Integration",
+					"description": "Set up Capacitor project to wrap Next.js as iOS WebView app",
+					"status": "planned"
+				},
+				{
+					"id": "m4-2",
+					"title": "Offline Capability",
+					"description": "LocalForage or IndexedDB for offline document storage, sync when online",
+					"status": "planned"
+				},
+				{
+					"id": "m4-3",
+					"title": "CI/CD Pipeline for App Store",
+					"description": "GitHub Actions with macOS runner, Fastlane for TestFlight/App Store uploads",
+					"status": "planned"
+				},
+				{
+					"id": "m4-4",
+					"title": "App Store Requirements",
+					"description": "First-launch screen, settings page, offline state, privacy declarations",
+					"status": "planned"
+				}
+			]
+		},
+		{
+			"id": "phase-5",
+			"name": "Advanced Features",
+			"status": "future",
+			"description": "Long-term features for power users and collaboration",
+			"milestones": [
+				{
+					"id": "m5-1",
+					"title": "CRDT-Based Real-Time Collaboration",
+					"description": "Y.js or Automerge for conflict-free real-time editing",
+					"status": "future"
+				},
+				{
+					"id": "m5-2",
+					"title": "Character Relationship Graphs",
+					"description": "Visual maps of character connections, semantic tagging",
+					"status": "future"
+				},
+				{
+					"id": "m5-3",
+					"title": "Timeline/Narrative Visualization",
+					"description": "Zoomable timeline view of story structure, relationship overlays",
+					"status": "future"
+				},
+				{
+					"id": "m5-4",
+					"title": "User Accounts & Cloud Sync",
+					"description": "Supabase or Clerk auth, cloud document storage",
+					"status": "future"
+				},
+				{
+					"id": "m5-5",
+					"title": "AI-Assisted Story Node Generation",
+					"description": "LLM-powered suggestions for plot development, character arcs",
+					"status": "future"
+				}
+			]
+		}
+	]
+}

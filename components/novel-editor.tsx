@@ -17,7 +17,10 @@ import {
 	createSuggestionItems,
 	renderItems,
 	handleCommandNavigation,
+	useEditor,
 } from "novel";
+import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import type { TextDragData } from "@/components/tab-system";
 
 import {
 	Heading1,
@@ -50,6 +53,8 @@ export interface NovelEditorProps {
 	editorKey?: string;
 	/** Whether the editor is read-only */
 	readOnly?: boolean;
+	/** Source file path for drag and drop */
+	sourceFilePath?: string;
 }
 
 // =============================================================================
@@ -196,8 +201,11 @@ export function NovelEditor({
 	showJsonPreview = false,
 	editorKey,
 	readOnly = false,
+	sourceFilePath,
 }: NovelEditorProps) {
 	const [jsonContent, setJsonContent] = useState<unknown>(null);
+	const [editorInstance, setEditorInstance] = useState<any>(null);
+	const editorRef = useRef<HTMLDivElement>(null);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastContentRef = useRef<string>(initialContent);
 
@@ -211,6 +219,7 @@ export function NovelEditor({
 	const handleUpdate = useCallback(
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		({ editor }: { editor: any }) => {
+			setEditorInstance(editor);
 			setJsonContent(editor.getJSON());
 
 			// Get text content for saving
@@ -234,6 +243,87 @@ export function NovelEditor({
 		[onChange, onContentChange]
 	);
 
+	// Set up drag and drop for selected text
+	useEffect(() => {
+		const element = editorRef.current;
+		if (!element || !sourceFilePath || !editorInstance) return;
+
+		// Find the ProseMirror editor content element
+		const proseMirrorElement = element.querySelector(".ProseMirror");
+		if (!proseMirrorElement) return;
+
+		const cleanup = draggable({
+			element: proseMirrorElement as HTMLElement,
+			canDrag: ({ nativeEvent }) => {
+				if (!editorInstance || !sourceFilePath) return false;
+				
+				// Check if there's a text selection
+				const selection = editorInstance.state.selection;
+				const hasSelection = selection && !selection.empty;
+				
+				// Also check native selection as fallback
+				const nativeSelection = window.getSelection();
+				const hasNativeSelection = nativeSelection && nativeSelection.toString().length > 0;
+				
+				return hasSelection || hasNativeSelection || false;
+			},
+			getInitialData: ({ nativeEvent }) => {
+				if (!editorInstance || !sourceFilePath) return {};
+
+				// Try to get selection from editor first
+				let selection = editorInstance.state.selection;
+				let selectedText = "";
+				let from = 0;
+				let to = 0;
+
+				if (selection && !selection.empty) {
+					from = selection.from;
+					to = selection.to;
+					selectedText = editorInstance.state.doc.textBetween(from, to);
+				} else {
+					// Fallback to native selection
+					const nativeSelection = window.getSelection();
+					if (nativeSelection && nativeSelection.toString().length > 0) {
+						selectedText = nativeSelection.toString();
+						// For native selection, we can't get exact positions, so we'll search for it
+						const fullText = editorInstance.state.doc.textContent;
+						const searchIndex = fullText.indexOf(selectedText);
+						if (searchIndex !== -1) {
+							from = searchIndex;
+							to = searchIndex + selectedText.length;
+						}
+					}
+				}
+
+				if (!selectedText) return {};
+
+				// Serialize selected content to markdown if we have editor selection
+				let selectedContent = selectedText;
+				if (selection && !selection.empty) {
+					selectedContent = serializeSelectionToMarkdown(editorInstance, selection) || selectedText;
+				}
+
+				const dragData: TextDragData = {
+					type: "text-block",
+					content: selectedContent,
+					sourcePath: sourceFilePath,
+					selectionRange: {
+						from,
+						to,
+					},
+				};
+
+				console.log("[NovelEditor] Drag started with data:", dragData);
+				return dragData as unknown as Record<string, unknown>;
+			},
+			onDragStart: () => {
+				console.log("[NovelEditor] Drag started");
+			},
+		});
+
+		return cleanup;
+	}, [editorInstance, sourceFilePath]);
+
 	// Cleanup debounce on unmount
 	useEffect(() => {
 		return () => {
@@ -246,12 +336,25 @@ export function NovelEditor({
 	return (
 		<div className="flex flex-1 flex-col" key={editorKey}>
 			<EditorRoot>
-				<EditorContent
-					className="relative min-h-[60vh] py-4"
-					extensions={extensions}
-					initialContent={initialEditorContent}
-					immediatelyRender={false}
-					onUpdate={handleUpdate}
+				<div 
+					ref={editorRef}
+					onDragStart={(e) => {
+						// Prevent default browser drag for text selection
+						// We'll handle it with Pragmatic Drag and Drop
+						if (editorInstance) {
+							const selection = editorInstance.state.selection;
+							if (selection && !selection.empty) {
+								e.preventDefault();
+							}
+						}
+					}}
+				>
+					<EditorContent
+						className="relative min-h-[60vh] py-4"
+						extensions={extensions}
+						initialContent={initialEditorContent}
+						immediatelyRender={false}
+						onUpdate={handleUpdate}
 					editorProps={{
 						editable: () => !readOnly,
 						handleDOMEvents: {
@@ -308,6 +411,7 @@ export function NovelEditor({
 						</EditorCommandList>
 					</EditorCommand>
 				</EditorContent>
+				</div>
 			</EditorRoot>
 
 			{showJsonPreview && (
@@ -475,6 +579,23 @@ function parseMarkdownToContent(markdown: string): unknown {
 function serializeContentToMarkdown(editor: any): string {
 	const json = editor.getJSON();
 	return serializeNode(json);
+}
+
+/**
+ * Serialize a selection range to markdown
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function serializeSelectionToMarkdown(editor: any, selection: any): string {
+	// Get the selected content as a document fragment
+	const fragment = selection.content();
+	
+	// Create a temporary document with just the selection
+	const tempDoc = {
+		type: "doc",
+		content: fragment.content || [],
+	};
+	
+	return serializeNode(tempDoc);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
