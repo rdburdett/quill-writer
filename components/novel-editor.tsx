@@ -254,7 +254,7 @@ export function NovelEditor({
 
 		const cleanup = draggable({
 			element: proseMirrorElement as HTMLElement,
-			canDrag: ({ nativeEvent }) => {
+			canDrag: () => {
 				if (!editorInstance || !sourceFilePath) return false;
 				
 				// Check if there's a text selection
@@ -267,7 +267,7 @@ export function NovelEditor({
 				
 				return hasSelection || hasNativeSelection || false;
 			},
-			getInitialData: ({ nativeEvent }) => {
+			getInitialData: () => {
 				if (!editorInstance || !sourceFilePath) return {};
 
 				// Try to get selection from editor first
