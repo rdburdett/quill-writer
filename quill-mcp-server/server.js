@@ -618,7 +618,7 @@ app.get("/linear/issue/:id", async (req, res) => {
 
 const PORT = 5051;
 app.listen(PORT, () => {
-	console.log(`Quill MCP server running on port ${PORT}`);
+	console.log(`Quill Project Context Server running on port ${PORT}`);
 	console.log(`Repo root: ${REPO_ROOT}`);
 	console.log(`Safety mode: ${CONFIG.safety.mode}`);
 	console.log(`Linear enabled: ${CONFIG.linear.enabled}`);

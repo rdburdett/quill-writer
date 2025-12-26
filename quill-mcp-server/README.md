@@ -1,10 +1,10 @@
-# Quill MCP Server
+# Quill Project Context Server
 
-A simple, local MCP (Model Context Protocol) server for the Quill Writer project. This server provides a centralized source of knowledge and controlled access to your repository for AI agents and tools.
+A REST API server for the Quill Writer project that provides centralized project context, decisions, roadmap, and controlled file/git operations. This is currently implemented as a REST API (not a true MCP server) but can be converted to the MCP protocol later if needed.
 
 ## Purpose
 
-This MCP server provides:
+This Project Context Server provides:
 - **Quill Context Capsule**: Long-term project context and architecture documentation
 - **Decision Log**: Architectural and design decisions with rationale
 - **Roadmap**: Atomic tasks and feature tracking

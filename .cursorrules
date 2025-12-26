@@ -1,6 +1,93 @@
-Before writing any code:
-1. Call GET http://localhost:5051/context/full to load project context
-2. Call GET http://localhost:5051/linear/next to get the next task (if Linear is enabled)
-3. Review decisions and roadmap before making changes
-4. Always create a branch before writing files
-5. Use POST /files/diff to preview changes before writing
+# Quill Writer Project Rules
+
+## Project Context Server
+The project uses a REST API server (Project Context Server) running on `http://localhost:5051` to provide centralized project context, decisions, roadmap, and controlled file/git operations. This is a REST API server, not a true MCP server - it can be converted to MCP protocol later if needed.
+
+## Required Workflow Before Making Changes
+
+### 1. Load Project Context
+**ALWAYS** start by loading the full project context:
+- **First, check if server is running**: `curl -s http://localhost:5051/context/quill > /dev/null 2>&1 && echo "Server running" || echo "Server not running"`
+- Use `run_terminal_cmd` with: `curl http://localhost:5051/context/full`
+- Or use axios: `axios.get('http://localhost:5051/context/full')`
+- This provides: project context, decisions log, roadmap, and Linear issues (if enabled)
+- **If the server is not running**, inform the user: "The Project Context Server is not running. Start it with: cd quill-mcp-server && npm run background"
+- If server is unavailable, you can still proceed but should inform the user
+
+### 2. Check Next Task (if Linear enabled)
+- Call: `curl http://localhost:5051/linear/next` or `axios.get('http://localhost:5051/linear/next')`
+- Review the task before starting work
+- If no task is returned, check the roadmap for next milestone
+
+### 3. Review Decisions and Roadmap
+- Review the `decisions` array from `/context/full` to understand architectural choices
+- Review the `roadmap` to see current phase and milestones
+- Ensure your changes align with existing decisions
+- If making a new architectural decision, document it via `POST /decisions`
+
+### 4. Git Branch Management
+**ALWAYS** create a branch before writing files:
+- Check current branch: `curl http://localhost:5051/git/branch`
+- Create new branch: `curl -X POST http://localhost:5051/git/branch -H "Content-Type: application/json" -d '{"name": "feature/your-feature-name", "create": true}'`
+- Or use axios: `axios.post('http://localhost:5051/git/branch', { name: 'feature/your-feature-name', create: true })`
+- Use descriptive branch names matching the feature/task
+
+### 5. Preview Changes Before Writing
+**ALWAYS** preview changes using the diff endpoint:
+- Call: `curl -X POST http://localhost:5051/files/diff -H "Content-Type: application/json" -d '{"path": "path/to/file", "content": "new content"}'`
+- Or use axios: `axios.post('http://localhost:5051/files/diff', { path: 'path/to/file', content: 'new content' })`
+- Review the diff before writing
+- Only write files after confirming the changes are correct
+
+## File Operations
+
+### Reading Files
+- Use: `curl "http://localhost:5051/files/read?path=relative/path/to/file"` or `axios.get('http://localhost:5051/files/read', { params: { path: 'relative/path/to/file' } })`
+- Paths are relative to repo root
+
+### Writing Files
+- **First**: Use `/files/diff` to preview changes
+- **Then**: Use `curl -X POST http://localhost:5051/files/write -H "Content-Type: application/json" -d '{"path": "path/to/file", "content": "file content"}'`
+- Or use axios: `axios.post('http://localhost:5051/files/write', { path: 'path/to/file', content: 'file content' })`
+- Protected paths (`.env*`, `.git/*`, `node_modules/*`, lock files) cannot be written
+- Protected branches (`main`, `master`) require a feature branch
+
+### Listing Files
+- Use: `curl "http://localhost:5051/files/list?path=optional/subdirectory"` or `axios.get('http://localhost:5051/files/list', { params: { path: 'optional/subdirectory' } })`
+
+## Decision Logging
+
+### Adding Decisions
+When making architectural or design decisions:
+- Call: `curl -X POST http://localhost:5051/decisions -H "Content-Type: application/json" -d '{"title": "Decision title", "rationale": "Why this decision was made"}'`
+- Or use axios: `axios.post('http://localhost:5051/decisions', { title: 'Decision title', rationale: 'Why this decision was made' })`
+- Include category if relevant (ui, architecture, editor, backend, etc.)
+
+## Git Operations
+
+### Check Status
+- Use: `curl http://localhost:5051/git/status` or `axios.get('http://localhost:5051/git/status')`
+
+### View Diff
+- Use: `curl "http://localhost:5051/git/diff?path=optional/file/path"` or `axios.get('http://localhost:5051/git/diff', { params: { path: 'optional/file/path' } })`
+
+### Commit Changes
+- Use: `curl -X POST http://localhost:5051/git/commit -H "Content-Type: application/json" -d '{"message": "Commit message", "files": ["optional", "file", "list"]}'`
+- Or use axios: `axios.post('http://localhost:5051/git/commit', { message: 'Commit message', files: ['optional', 'file', 'list'] })`
+- Cannot commit directly to protected branches (`main`, `master`)
+
+## Error Handling
+
+- If the server returns an error, check:
+  1. Is the server running? (`npm start` in `quill-mcp-server/`)
+  2. Is the endpoint correct?
+  3. Are required parameters provided?
+  4. Are you on a protected branch?
+- If server is unavailable, inform the user but proceed with caution using direct file operations
+
+## Code Style
+
+- Use tabs for indentation (not spaces)
+- Use axios instead of fetch for HTTP requests
+- Match existing Prettier formatting
+- Follow existing code patterns and architecture decisions
