@@ -82,5 +82,54 @@
 		"category": "architecture",
 		"rationale": "The File System Access API allows the web app to read/write files directly on the user's local filesystem with their permission. This provides a desktop-app-like experience for managing writing projects without requiring a backend for MVP.",
 		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-vision-001",
+		"title": "DAW-inspired workflow as core vision",
+		"category": "vision",
+		"rationale": "Quill brings organizational and workflow features from professional DAWs (like Ableton Live) into writing. The arrangement view mirrors Session View with vertical chronological ordering and horizontal stacking for mixing. Browser panel functions as sample library. This approach transforms how writers organize and compose long-form works.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-arrangement-001",
+		"title": "Two-axis arrangement: vertical (chronological) and horizontal (stacking)",
+		"category": "ux",
+		"rationale": "Arrangement view uses vertical axis for chronological order (timeline progression) and horizontal axis for stacking blocks that can be mixed down. This mirrors DAW workflow where tracks are arranged vertically and clips can be stacked horizontally for composition. Supports both manual mixing by writer and LLM-assisted mixing.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-automation-001",
+		"title": "DAW-style automations for narrative parameters",
+		"category": "feature",
+		"rationale": "Users can draw automation curves for tension, pacing, and mood throughout the story. These curves guide LLM generation when mixing blocks and trigger suggestions. Provides visual representation of narrative arc and ensures consistent pacing. Stored in project.json as curve data.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-fileformat-001",
+		"title": "Simple text files + JSON project file for portability",
+		"category": "architecture",
+		"rationale": "Project folders contain simple text files (Markdown/plain text) that can be opened in any editor (Word, Google Docs, etc.). Main project.json file contains all organizational metadata, timeline positions, automations, and style fingerprints. Entire project folder is shareable via email. No cloud dependency for core functionality.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-style-001",
+		"title": "Writing style fingerprinting with personalized embeddings",
+		"category": "ai",
+		"rationale": "System forms a fingerprint of writer's style through usage patterns, generating personalized embeddings. Enables LLM assistive generation that feels natural and on-brand. Supports multiple writing personas for versatile writers. Auto-detects style metrics (tone, descriptive density, dialogue ratio) based on recognized patterns.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-reroll-001",
+		"title": "Reroll feature for generating composition variations",
+		"category": "feature",
+		"rationale": "Users can stack blocks and generate multiple composition variations. Each variation saved as separate version. Writers can scroll between versions to compare alternatives. Generation respects automation curves and style fingerprint. Supports exploration of different narrative arrangements.",
+		"timestamp": "2024-12-19"
+	},
+	{
+		"id": "decision-notifications-001",
+		"title": "Intelligent notifications for continuity and consistency",
+		"category": "ai",
+		"rationale": "AI-powered notifications guide writers with continuity checks (character presence, consistency), pacing alerts, and style suggestions. Non-intrusive UI. Helps maintain narrative consistency without breaking writer's flow. Examples: 'John has been missing for 2,000 words' or 'Tension has been low for 3,000 words'.",
+		"timestamp": "2024-12-19"
 	}
 ]

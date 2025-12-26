@@ -6,13 +6,139 @@
 
 ## Table of Contents
 
-1. [Architecture Overview](#architecture-overview)
-2. [Frontend Stack](#frontend-stack)
-3. [Mobile Strategy](#mobile-strategy)
-4. [Monorepo Structure](#monorepo-structure)
-5. [Backend Architecture](#backend-architecture)
-6. [CI/CD Pipeline](#cicd-pipeline)
-7. [Responsive Design](#responsive-design)
+1. [Vision & Core Concepts](#vision--core-concepts)
+2. [Architecture Overview](#architecture-overview)
+3. [Frontend Stack](#frontend-stack)
+4. [Mobile Strategy](#mobile-strategy)
+5. [Monorepo Structure](#monorepo-structure)
+6. [Backend Architecture](#backend-architecture)
+7. [CI/CD Pipeline](#cicd-pipeline)
+8. [Responsive Design](#responsive-design)
+
+---
+
+## Vision & Core Concepts
+
+### Primary Inspiration: Digital Audio Workstations (DAWs)
+
+Quill's core vision is to bring the robust organizational and workflow features from professional DAWs like **Ableton Live** into a writing environment. This DAW-inspired approach, combined with deep AI integration (similar to modern IDEs like Cursor), creates a transformative writing experience.
+
+### Two Main Views
+
+1. **Clean Writing Space**: Distraction-free editor for focused composition
+2. **Grid-Based Arrangement View**: Ableton Session View-inspired timeline where users can:
+   - Color-code writing blocks
+   - Arrange blocks chronologically (vertical axis)
+   - Stack blocks horizontally for mixing/composition
+   - Drag blocks from browser panel (sample library) into arrangement
+
+### Browser Panel (Sample Library)
+
+Unsorted writing blocks are collected in a browser panel, functioning like a producer's sample library:
+- Drag ideas from browser into arrangement
+- Organize loose thoughts, fragments, and bullet points
+- Quick access to reusable content
+
+### File Format & Portability
+
+**Project Structure:**
+- Simple, familiar text file formats (Markdown, plain text)
+- Main project file contains:
+  - Organizational metadata
+  - Timeline positions of text "clips"
+  - Block relationships and structure
+  - Color coding and naming
+  - Automation curves
+  - Style fingerprints and personas
+
+**Portability Goals:**
+- Users can back up and open work in other environments (Microsoft Word, Google Docs)
+- Share project folders via email to other Quill users
+- All information necessary to reopen project contained within project folder
+- No cloud dependency for core functionality
+
+### Block System
+
+- **Hierarchical Blocks**: Small blocks can be grouped into larger blocks
+- **Drag & Drop**: Move blocks between folders, arrangement, and browser
+- **Visual Organization**: Color-code and rename blocks
+- **Click-to-Preview**: Clicking a block in arrangement reveals editable preview
+- **Locked Content**: Some blocks can be marked as immutable/preserved
+
+### Arrangement View Axes
+
+- **Vertical Axis**: Chronological order of clips (timeline progression)
+- **Horizontal Axis**: Stacking for mixing/composition
+  - Multiple blocks can be stacked horizontally
+  - "Mix down" by writer or LLM
+  - Supports locked content preservation
+  - Handles fragmented ideas and bullet points
+
+### Automations (DAW-Style)
+
+Like DAW automation curves, users can draw automations that control:
+- **Tension**: Intended tension levels in sections
+- **Pacing**: Narrative pacing parameters
+- **Mood**: Emotional tone throughout story
+
+**Use Cases:**
+- Guide text generation when "mixing" clips to master document
+- Trigger suggestions nudging writer to reconsider tone
+- Visual representation of narrative arc
+
+### Reroll Feature
+
+- Stack a cluster of text blocks
+- Generate multiple composition variations
+- Save and scroll between different versions
+- Compare alternative arrangements
+
+### Metadata & Intelligent Search
+
+**Auto-Generated Metadata:**
+- Characters (with dialogue attribution)
+- Locations and settings
+- Mood/tone analysis
+- Plot phase classification
+- POV identification
+- Style metrics (gloomy, cynical, highly descriptive, dialogue-heavy, etc.)
+
+**Search Capabilities:**
+- Natural language queries: "Find all passages where Mark talks to Susan"
+- Tag-based filtering
+- Cross-reference multiple tags
+
+**Visual Tag Filtering:**
+- Click tag(s) to filter timeline
+- Grey out clips not related to selected tags
+- Highlight clips matching tag criteria
+
+### Intelligent Notifications
+
+AI-powered guidance for writers:
+- "John has been missing from the story for over 2,000 words. Is this intentional?"
+- Continuity checks
+- Character presence tracking
+- Pacing suggestions
+
+### Writing Style Fingerprinting
+
+**Personalized Embeddings:**
+- Form a fingerprint of writer's style through usage
+- Enable LLM assistive generation that feels natural and on-brand
+- Capture writing patterns and preferences
+
+**Writing Personas:**
+- Manage multiple writing personas for versatile writers
+- Switch between different tones/styles
+- Writers can interact with their personalized embedding
+
+**Style Metrics:**
+- Auto-detected tags based on recognized patterns:
+  - "gloomy, cynical, highly descriptive, dialogue-heavy"
+  - Vocabulary distribution
+  - Sentence structure patterns
+  - Dialogue vs. narrative ratios
 
 ---
 
@@ -89,6 +215,153 @@ npx shadcn-ui@latest add [component-name]
 - Dark/light mode via `next-themes`
 - Editor subthemes defined in `theme/themes.ts`
 - CSS variables in `globals.css` for consistent theming
+
+---
+
+## Arrangement View (DAW-Inspired)
+
+### Layout Structure
+
+The Arrangement View is modeled after Ableton Live's Session View:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│  Browser Panel (Sample Library)                         │
+│  ┌──────┐ ┌──────┐ ┌──────┐ ┌──────┐                   │
+│  │Block │ │Block │ │Block │ │Block │  ...               │
+│  └──────┘ └──────┘ └──────┘ └──────┘                   │
+├─────────────────────────────────────────────────────────┤
+│  Arrangement Timeline                                    │
+│  Row 0: [Block A] [Block B] [Block C]                  │
+│  Row 1:        [Block D] [Block E]                      │
+│  Row 2: [Block F]                                        │
+│  Row 3: [Block G] [Block H] [Block I]                   │
+│         ↑                                                │
+│    Vertical = Chronological                              │
+│    Horizontal = Stacking/Mixing                          │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Vertical Axis (Chronological)
+
+- Each row represents a point in the narrative timeline
+- Blocks are ordered top-to-bottom by story progression
+- Scrolling vertically navigates through story time
+- Can insert rows to add new chronological positions
+
+### Horizontal Axis (Stacking/Mixing)
+
+- Multiple blocks can occupy the same horizontal position
+- Stacked blocks represent alternative versions or parallel threads
+- "Mix down" operation combines stacked blocks:
+  - Writer manually selects/edits combination
+  - LLM generates coherent blend based on automations
+- Supports locked content preservation during mixing
+
+### Block Interactions
+
+- **Color Coding**: Visual organization (characters, scenes, themes)
+- **Renaming**: Descriptive names for quick identification
+- **Click-to-Preview**: Click block to see editable content preview
+- **Drag & Drop**: Move blocks between rows, columns, and browser
+- **Grouping**: Small blocks → larger blocks (scenes, chapters)
+
+### Browser Panel Integration
+
+- Drag blocks from browser into arrangement
+- Drag blocks from arrangement back to browser
+- Browser acts as "sample library" for reusable content
+- Supports fragmented ideas, bullet points, and locked content
+
+---
+
+## Automations (DAW-Style)
+
+### Concept
+
+Like DAW automation curves, users can draw parameter curves that control narrative elements throughout the story.
+
+### Supported Parameters
+
+- **Tension**: Intended tension levels (0.0 - 1.0)
+- **Pacing**: Narrative pacing (slow, medium, fast)
+- **Mood**: Emotional tone (gloomy, optimistic, tense, etc.)
+
+### Automation Interface
+
+- Draw curves directly on timeline
+- X-axis: Story position (word count or chronological position)
+- Y-axis: Parameter value
+- Bezier curves for smooth transitions
+- Keyframe editing for precise control
+
+### Use Cases
+
+1. **Guide LLM Generation**: When mixing stacked blocks, automations inform AI about desired tension/pacing/mood
+2. **Suggestions**: System can suggest tone adjustments based on automation curves
+3. **Visual Feedback**: Visualize narrative arc and pacing
+4. **Consistency**: Maintain consistent pacing across long-form works
+
+### Implementation
+
+- Stored in `project.json` as curve data
+- Real-time visualization in Arrangement View
+- Accessible to LLM during generation
+- Can be exported/imported between projects
+
+---
+
+## Reroll Feature
+
+### Concept
+
+Generate multiple composition variations from a cluster of stacked blocks, allowing writers to explore different narrative arrangements.
+
+### Workflow
+
+1. **Select Blocks**: Stack multiple blocks horizontally in Arrangement View
+2. **Generate Variations**: Click "Reroll" to generate N alternative compositions
+3. **Save Versions**: Each variation saved as separate version
+4. **Compare**: Scroll between versions to compare alternatives
+5. **Select Best**: Choose preferred version or continue iterating
+
+### Generation Parameters
+
+- Respects automation curves (tension, pacing, mood)
+- Uses writer's style fingerprint for consistency
+- Preserves locked content
+- Can blend dialogue, narrative, and fragmented ideas
+
+### Version Management
+
+- Each reroll creates a new version snapshot
+- Versions are stored in project file
+- Can revert to previous versions
+- Compare versions side-by-side
+
+---
+
+## Intelligent Notifications
+
+### Purpose
+
+AI-powered guidance to help writers maintain consistency, continuity, and narrative flow.
+
+### Notification Types
+
+1. **Character Presence**: "John has been missing from the story for over 2,000 words. Is this intentional?"
+2. **Continuity Checks**: "Mark's eye color changed from blue to brown. Is this intentional?"
+3. **Pacing Alerts**: "Tension has been low for 3,000 words. Consider adding conflict?"
+4. **Tag Suggestions**: "This passage might involve 'tension' and 'character:Susan'. Add tags?"
+5. **Style Consistency**: "This block's style differs significantly from your usual tone."
+
+### Implementation
+
+- Background analysis of project metadata
+- Word count tracking per character/scene
+- Style fingerprint comparison
+- Configurable thresholds and sensitivity
+- Non-intrusive UI (toast notifications, sidebar alerts)
 
 ---
 
@@ -222,6 +495,7 @@ import { formatDate } from "@quill/lib";
 
 ### Embeddings Pipeline
 
+**Block-Level Embeddings:**
 ```
 Block Created/Updated
         ↓
@@ -234,6 +508,25 @@ Store in pgvector (1536 dimensions)
 Available for semantic search
 ```
 
+**Style Fingerprint Embeddings:**
+```
+Writer Usage Patterns
+        ↓
+Aggregate writing samples
+        ↓
+Generate style embedding (text-embedding-3-small)
+        ↓
+Store per-persona fingerprint
+        ↓
+Use for personalized LLM generation
+```
+
+**Use Cases:**
+- Semantic search: "Find all passages where Mark talks to Susan"
+- Style-consistent AI generation
+- Similarity matching for block suggestions
+- Continuity detection
+
 ### Metadata Extraction
 
 For each block, extract:
@@ -242,6 +535,79 @@ For each block, extract:
 - **Mood/Tone**: Vocabulary distribution analysis
 - **Plot Phase**: setup/conflict/rising/climax/resolution classification
 - **POV**: First/third person, narrator identification
+- **Style Metrics**: Auto-detected writing style characteristics:
+  - Tone descriptors (gloomy, cynical, optimistic, etc.)
+  - Descriptive density (highly descriptive, sparse, etc.)
+  - Dialogue ratio (dialogue-heavy, narrative-heavy, balanced)
+  - Sentence structure patterns
+  - Vocabulary complexity
+
+### Project File Format
+
+**Structure:**
+```
+project-folder/
+├── project.json          # Main project file with metadata
+├── blocks/
+│   ├── block-001.md      # Individual text blocks
+│   ├── block-002.md
+│   └── ...
+├── scenes/
+│   └── scene-001.md      # Scene containers
+└── chapters/
+    └── chapter-001.md    # Chapter containers
+```
+
+**project.json Schema:**
+```json
+{
+  "version": "1.0",
+  "blocks": [
+    {
+      "id": "block-001",
+      "file": "blocks/block-001.md",
+      "position": { "row": 0, "column": 0 },
+      "color": "#FF5733",
+      "name": "Opening Scene",
+      "locked": false,
+      "tags": ["character:Mark", "location:coffee-shop"],
+      "metadata": {
+        "characters": ["Mark", "Susan"],
+        "locations": ["coffee-shop"],
+        "mood": "tense",
+        "style": ["dialogue-heavy", "descriptive"]
+      }
+    }
+  ],
+  "automations": [
+    {
+      "parameter": "tension",
+      "curve": [[0, 0.2], [1000, 0.8], [2000, 0.5]],
+      "unit": "words"
+    }
+  ],
+  "styleFingerprint": {
+    "persona": "default",
+    "metrics": {
+      "tone": ["cynical", "descriptive"],
+      "dialogueRatio": 0.45,
+      "avgSentenceLength": 18.5
+    },
+    "embedding": "base64-encoded-vector"
+  },
+  "timeline": {
+    "clips": [
+      { "blockId": "block-001", "start": 0, "end": 500 }
+    ]
+  }
+}
+```
+
+**Portability:**
+- Text files are standard Markdown/plain text (openable in any editor)
+- Project file is JSON (human-readable, version-controllable)
+- All organizational data self-contained in project folder
+- Shareable via email, cloud storage, or version control
 
 ---
 
