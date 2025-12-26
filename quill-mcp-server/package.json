@@ -4,7 +4,11 @@
 	"main": "server.js",
 	"type": "module",
 	"scripts": {
-		"start": "node server.js"
+		"start": "node server.js",
+		"dev": "./scripts/start-dev.sh",
+		"background": "./scripts/start-background.sh",
+		"stop": "./scripts/stop.sh",
+		"status": "./scripts/status.sh"
 	},
 	"dependencies": {
 		"express": "^4.18.2",
