@@ -1,6 +1,6 @@
 /**
  * Project Loader
- * 
+ *
  * Handles loading and saving the .quill project file.
  */
 
@@ -15,7 +15,11 @@ import {
 	createEmptyProject,
 	createBlockMetadata,
 } from "./types";
-import { scanDirectory, extractTitle, countWords } from "@/lib/filesystem/scanner";
+import {
+	scanDirectory,
+	extractTitle,
+	countWords,
+} from "@/lib/filesystem/scanner";
 
 // =============================================================================
 // Load/Save .quill File
@@ -23,17 +27,30 @@ import { scanDirectory, extractTitle, countWords } from "@/lib/filesystem/scanne
 
 /**
  * Load a project from a directory
- * Creates a new .quill file if one doesn't exist
+ * Detects CRDT format (.quill folder) or falls back to legacy JSON format
  */
 export async function loadProject(
 	directoryHandle: FileSystemDirectoryHandle
 ): Promise<QuillProject> {
+	// Check if this is a CRDT project folder
+	const { isQuillProjectFolder, loadCrdtProject } = await import(
+		"./crdt/loader"
+	);
+	const isCrdt = await isQuillProjectFolder(directoryHandle);
+
+	if (isCrdt) {
+		// Load CRDT project
+		const crdt = await loadCrdtProject(directoryHandle);
+		return crdt.project;
+	}
+
+	// Fall back to legacy JSON format
 	const exists = await fileExists(directoryHandle, QUILL_FILE_NAME);
 
 	if (exists) {
 		const content = await readTextFile(directoryHandle, QUILL_FILE_NAME);
 		const project = JSON.parse(content) as QuillProject;
-		
+
 		// Migrate if needed
 		return migrateProject(project);
 	}
@@ -62,7 +79,7 @@ export async function saveProject(
 function migrateProject(project: QuillProject): QuillProject {
 	// Currently at version 1.0.0, no migrations needed
 	// Add migrations here as the schema evolves
-	
+
 	if (!project.version) {
 		project.version = QUILL_FILE_VERSION;
 	}
@@ -97,10 +114,10 @@ export async function syncBlocksWithFilesystem(
 ): Promise<{ project: QuillProject; added: string[]; removed: string[] }> {
 	const tree = await scanDirectory(directoryHandle);
 	const filePaths = getAllFilePaths(tree);
-	
+
 	const added: string[] = [];
 	const removed: string[] = [];
-	
+
 	// Create a new blocks map
 	const newBlocks: Record<string, BlockMetadata> = {};
 
@@ -170,7 +187,7 @@ export async function loadBlock(
 	try {
 		const content = await readTextFile(directoryHandle, filePath);
 		const filename = filePath.split("/").pop() ?? filePath;
-		
+
 		return {
 			...metadata,
 			filePath,
@@ -220,7 +237,7 @@ export async function insertTextAtPosition(
 ): Promise<string> {
 	const { readTextFile } = await import("@/lib/filesystem");
 	const content = await readTextFile(directoryHandle, filePath);
-	
+
 	// Insert text at position
 	const before = content.slice(0, position);
 	const after = content.slice(position);
@@ -239,7 +256,7 @@ export async function removeTextFromRange(
 ): Promise<string> {
 	const { readTextFile } = await import("@/lib/filesystem");
 	const content = await readTextFile(directoryHandle, filePath);
-	
+
 	// Remove text from range
 	const before = content.slice(0, from);
 	const after = content.slice(to);
@@ -264,7 +281,9 @@ export async function createBlock(
 	const folderParts = folderPath.split("/").filter(Boolean);
 	let currentHandle = directoryHandle;
 	for (const part of folderParts) {
-		currentHandle = await currentHandle.getDirectoryHandle(part, { create: true });
+		currentHandle = await currentHandle.getDirectoryHandle(part, {
+			create: true,
+		});
 	}
 
 	// Create the file path
@@ -313,7 +332,7 @@ export async function moveBlock(
 	toPath: string
 ): Promise<QuillProject> {
 	const { moveFile } = await import("@/lib/filesystem");
-	
+
 	// Move the file
 	await moveFile(directoryHandle, fromPath, toPath);
 
@@ -335,7 +354,7 @@ export async function deleteBlock(
 	filePath: string
 ): Promise<QuillProject> {
 	const { deleteFile } = await import("@/lib/filesystem");
-	
+
 	// Delete the file
 	await deleteFile(directoryHandle, filePath);
 
@@ -409,4 +428,3 @@ export function deleteCharacter(
 		blocks: newBlocks,
 	};
 }
-
