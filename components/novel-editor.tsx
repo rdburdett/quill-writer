@@ -243,7 +243,9 @@ export function NovelEditor({
 		[onChange, onContentChange]
 	);
 
-	// Set up drag and drop for selected text
+	// Set up drag and drop for selected text (only when text is selected, not for block dragging)
+	// Tiptap's GlobalDragHandle handles block reordering internally using native HTML5 drag
+	// We detect Tiptap drag operations and temporarily disable our draggable to avoid conflicts
 	useEffect(() => {
 		const element = editorRef.current;
 		if (!element || !sourceFilePath || !editorInstance) return;
@@ -252,21 +254,66 @@ export function NovelEditor({
 		const proseMirrorElement = element.querySelector(".ProseMirror");
 		if (!proseMirrorElement) return;
 
-		const cleanup = draggable({
-			element: proseMirrorElement as HTMLElement,
-			canDrag: () => {
-				if (!editorInstance || !sourceFilePath) return false;
-				
-				// Check if there's a text selection
-				const selection = editorInstance.state.selection;
-				const hasSelection = selection && !selection.empty;
-				
-				// Also check native selection as fallback
-				const nativeSelection = window.getSelection();
-				const hasNativeSelection = nativeSelection && nativeSelection.toString().length > 0;
-				
-				return hasSelection || hasNativeSelection || false;
-			},
+		// Track if we're currently in a Tiptap drag operation
+		let isTiptapDrag = false;
+		let cleanupDraggable: (() => void) | null = null;
+		
+		// Listen for Tiptap's native drag events to avoid conflicts
+		const handleNativeDragStart = (e: DragEvent) => {
+			// Check if this is coming from a drag handle
+			const target = e.target as HTMLElement;
+			if (target.classList.contains("drag-handle") || target.closest(".drag-handle")) {
+				isTiptapDrag = true;
+				// Disable our draggable temporarily
+				if (cleanupDraggable) {
+					cleanupDraggable();
+					cleanupDraggable = null;
+				}
+				return;
+			}
+		};
+
+		const handleNativeDragEnd = () => {
+			// Re-enable draggable after Tiptap drag ends
+			setTimeout(() => {
+				isTiptapDrag = false;
+				// Re-setup draggable if needed
+				setupDraggable();
+			}, 150);
+		};
+
+		const setupDraggable = () => {
+			// Clean up existing draggable if any
+			if (cleanupDraggable) {
+				cleanupDraggable();
+				cleanupDraggable = null;
+			}
+
+			// Only set up if not in Tiptap drag
+			if (isTiptapDrag) return;
+
+			cleanupDraggable = draggable({
+				element: proseMirrorElement as HTMLElement,
+				canDrag: () => {
+					if (!editorInstance || !sourceFilePath || isTiptapDrag) return false;
+					
+					// Check if clicking on or near a drag handle
+					const activeElement = document.activeElement as HTMLElement;
+					if (activeElement?.classList.contains("drag-handle") || 
+						activeElement?.closest(".drag-handle")) {
+						return false;
+					}
+					
+					// Check if there's a text selection
+					const selection = editorInstance.state.selection;
+					const hasSelection = selection && !selection.empty;
+					
+					// Also check native selection as fallback
+					const nativeSelection = window.getSelection();
+					const hasNativeSelection = nativeSelection && nativeSelection.toString().length > 0;
+					
+					return hasSelection || hasNativeSelection || false;
+				},
 			getInitialData: () => {
 				if (!editorInstance || !sourceFilePath) return {};
 
@@ -319,9 +366,23 @@ export function NovelEditor({
 			onDragStart: () => {
 				console.log("[NovelEditor] Drag started");
 			},
-		});
+			});
+		};
 
-		return cleanup;
+		// Initial setup
+		setupDraggable();
+
+		// Listen for native drag events
+		proseMirrorElement.addEventListener("dragstart", handleNativeDragStart, true);
+		proseMirrorElement.addEventListener("dragend", handleNativeDragEnd, true);
+
+		return () => {
+			if (cleanupDraggable) {
+				cleanupDraggable();
+			}
+			proseMirrorElement.removeEventListener("dragstart", handleNativeDragStart, true);
+			proseMirrorElement.removeEventListener("dragend", handleNativeDragEnd, true);
+		};
 	}, [editorInstance, sourceFilePath]);
 
 	// Cleanup debounce on unmount
@@ -336,19 +397,7 @@ export function NovelEditor({
 	return (
 		<div className="flex flex-1 flex-col" key={editorKey}>
 			<EditorRoot>
-				<div 
-					ref={editorRef}
-					onDragStart={(e) => {
-						// Prevent default browser drag for text selection
-						// We'll handle it with Pragmatic Drag and Drop
-						if (editorInstance) {
-							const selection = editorInstance.state.selection;
-							if (selection && !selection.empty) {
-								e.preventDefault();
-							}
-						}
-					}}
-				>
+				<div ref={editorRef}>
 					<EditorContent
 						className="relative min-h-[60vh] py-4"
 						extensions={extensions}
