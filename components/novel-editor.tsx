@@ -259,7 +259,7 @@ export function NovelEditor({
 		let cleanupDraggable: (() => void) | null = null;
 		
 		// Listen for Tiptap's native drag events to avoid conflicts
-		const handleNativeDragStart = (e: DragEvent) => {
+		const handleNativeDragStart = (e: Event) => {
 			// Check if this is coming from a drag handle
 			const target = e.target as HTMLElement;
 			if (target.classList.contains("drag-handle") || target.closest(".drag-handle")) {
@@ -273,7 +273,7 @@ export function NovelEditor({
 			}
 		};
 
-		const handleNativeDragEnd = () => {
+		const handleNativeDragEnd = (_e: Event) => {
 			// Re-enable draggable after Tiptap drag ends
 			setTimeout(() => {
 				isTiptapDrag = false;
