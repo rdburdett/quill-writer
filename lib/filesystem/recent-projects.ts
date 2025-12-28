@@ -54,7 +54,6 @@ export async function addRecentProject(
 		// Check if project already exists
 		const getRequest = store.get(name);
 		getRequest.onsuccess = () => {
-			const existing = getRequest.result;
 			const project: RecentProject = {
 				handle,
 				name,

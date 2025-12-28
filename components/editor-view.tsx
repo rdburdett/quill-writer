@@ -348,6 +348,37 @@ export function EditorView() {
 		setRenameFileName("");
 	}, []);
 
+	// Handle move file (via drag and drop)
+	const handleMoveFile = useCallback(async (fromPath: string, toPath: string) => {
+		if (!project.directoryHandle || !project.project || fromPath === toPath) {
+			return;
+		}
+
+		try {
+			// Move the file
+			const updatedProject = await moveBlock(
+				project.directoryHandle,
+				project.project,
+				fromPath,
+				toPath
+			);
+
+			// Update project state
+			project.updateProject(updatedProject);
+
+			// Refresh the tree
+			await project.refreshTree();
+
+			// If this was an open file, update it
+			if (block.openBlocks.has(fromPath)) {
+				await block.openBlock(toPath);
+				folderTree.select(toPath);
+			}
+		} catch (error) {
+			console.error("Failed to move file:", error);
+		}
+	}, [project, block, folderTree]);
+
 	// Handle new folder request
 	const handleNewFolderRequest = useCallback((parentPath: string) => {
 		setNewFolderParent(parentPath);
@@ -420,6 +451,7 @@ export function EditorView() {
 					onNewFolder={handleNewFolderRequest}
 					onRenameFile={handleRenameFileRequest}
 					onDropText={handleDropText}
+					onMoveFile={handleMoveFile}
 				/>
 			</div>
 
