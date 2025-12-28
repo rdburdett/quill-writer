@@ -19,6 +19,7 @@ import {
 	createDirectory,
 	writeTextFile,
 } from "@/lib/filesystem";
+import { addRecentProject } from "@/lib/filesystem/recent-projects";
 import { scanDirectory } from "@/lib/filesystem/scanner";
 import {
 	loadProject,
@@ -59,6 +60,8 @@ export interface ProjectState {
 export interface ProjectActions {
 	/** Open an existing project folder */
 	openProject: () => Promise<void>;
+	/** Open a project from a directory handle */
+	openProjectFromHandle: (handle: FileSystemDirectoryHandle) => Promise<void>;
 	/** Create a new project with default folder structure */
 	createNewProject: () => Promise<void>;
 	/** Try to restore the last opened project */
@@ -192,6 +195,11 @@ export function useProject(): ProjectState & ProjectActions {
 			console.log("[Quill] Loading project...");
 			const project = await loadProject(handle);
 			console.log("[Quill] Project loaded:", project.name);
+			
+			// Add to recent projects
+			await addRecentProject(handle, project.name).catch((error) => {
+				console.warn("[Quill] Failed to add to recent projects:", error);
+			});
 
 			// Sync with filesystem
 			console.log("[Quill] Syncing blocks with filesystem...");
@@ -221,6 +229,58 @@ export function useProject(): ProjectState & ProjectActions {
 			});
 		} catch (error) {
 			console.error("[Quill] Error opening project:", error);
+			setState((prev) => ({
+				...prev,
+				isLoading: false,
+				error: error instanceof Error ? error : new Error(String(error)),
+			}));
+		}
+	}, []);
+
+	const openProjectFromHandle = useCallback(async (handle: FileSystemDirectoryHandle) => {
+		try {
+			setState((prev) => ({ ...prev, isLoading: true, error: null }));
+
+			// Request permission
+			const hasPermission = await requestPermission(handle);
+			if (!hasPermission) {
+				throw new Error("Permission denied to access folder");
+			}
+
+			// Store handle for later restoration
+			await storeDirectoryHandle(handle);
+
+			// Load project
+			const project = await loadProject(handle);
+			
+			// Add to recent projects
+			await addRecentProject(handle, project.name).catch((error) => {
+				console.warn("[Quill] Failed to add to recent projects:", error);
+			});
+
+			// Sync with filesystem
+			const { project: syncedProject } = await syncBlocksWithFilesystem(handle, project);
+
+			// Save if there were changes
+			if (JSON.stringify(project.blocks) !== JSON.stringify(syncedProject.blocks)) {
+				await saveProject(handle, syncedProject);
+			}
+
+			// Scan folder tree
+			const tree = await scanDirectory(handle);
+
+			setState({
+				isOpen: true,
+				isLoading: false,
+				directoryHandle: handle,
+				project: syncedProject,
+				folderTree: tree,
+				error: null,
+				hasUnsavedChanges: false,
+				isWatching: false,
+			});
+		} catch (error) {
+			console.error("[Quill] Error opening project from handle:", error);
 			setState((prev) => ({
 				...prev,
 				isLoading: false,
@@ -296,6 +356,11 @@ Happy writing! ✍️
 			// Load project
 			console.log("[Quill] Loading project...");
 			const project = await loadProject(handle);
+			
+			// Add to recent projects
+			await addRecentProject(handle, project.name).catch((error) => {
+				console.warn("[Quill] Failed to add to recent projects:", error);
+			});
 
 			// Sync with filesystem
 			const { project: syncedProject } = await syncBlocksWithFilesystem(handle, project);
@@ -480,6 +545,7 @@ Happy writing! ✍️
 	return {
 		...state,
 		openProject,
+		openProjectFromHandle,
 		createNewProject,
 		restoreLastProject,
 		closeProject,

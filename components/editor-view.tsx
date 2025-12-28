@@ -2,8 +2,16 @@
 
 import { useCallback, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Settings, X, AlertTriangle, RefreshCw } from "lucide-react";
+import { Settings, X, AlertTriangle, RefreshCw, FolderOpen, FolderPlus, Save, XCircle, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuLabel,
+	DropdownMenuSeparator,
+	DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { NovelEditor } from "@/components/novel-editor";
 import { FolderSidebar } from "@/components/folder-sidebar";
 import { TabSystem, type Tab, type TextDragData } from "@/components/tab-system";
@@ -487,26 +495,39 @@ export function EditorView() {
 			<div className="flex flex-1 flex-col">
 				{/* Header Bar */}
 				<div className="flex items-center justify-between border-b border-border px-4 py-2">
-					<div className="flex items-center gap-2">
-						{block.getActiveBlock() ? (
-							<>
-								<span className="font-medium">{block.getActiveBlock()?.title}</span>
-								{block.unsavedBlocks.has(block.activeBlockPath ?? "") && (
-									<span className="text-xs text-muted-foreground">
-										(unsaved)
-									</span>
-								)}
-								{block.savingBlocks.has(block.activeBlockPath ?? "") && (
-									<span className="text-xs text-muted-foreground animate-pulse">
-										Saving...
-									</span>
-								)}
-							</>
-						) : (
-							<span className="text-muted-foreground">
-								Select a file to edit
-							</span>
-						)}
+					<div className="flex items-center gap-4">
+						{/* Project Menu */}
+						<ProjectMenu
+							projectName={project.project?.name}
+							hasUnsavedChanges={project.hasUnsavedChanges}
+							onCloseProject={project.closeProject}
+							onOpenProject={project.openProject}
+							onCreateNewProject={project.createNewProject}
+							onSaveProject={project.saveProject}
+						/>
+						
+						{/* File Info */}
+						<div className="flex items-center gap-2">
+							{block.getActiveBlock() ? (
+								<>
+									<span className="font-medium">{block.getActiveBlock()?.title}</span>
+									{block.unsavedBlocks.has(block.activeBlockPath ?? "") && (
+										<span className="text-xs text-muted-foreground">
+											(unsaved)
+										</span>
+									)}
+									{block.savingBlocks.has(block.activeBlockPath ?? "") && (
+										<span className="text-xs text-muted-foreground animate-pulse">
+											Saving...
+										</span>
+									)}
+								</>
+							) : (
+								<span className="text-muted-foreground">
+									Select a file to edit
+								</span>
+							)}
+						</div>
 					</div>
 
 					<div className="flex items-center gap-2">
@@ -591,6 +612,68 @@ export function EditorView() {
 				</div>
 			</div>
 		</div>
+	);
+}
+
+// =============================================================================
+// Project Menu
+// =============================================================================
+
+interface ProjectMenuProps {
+	projectName?: string;
+	hasUnsavedChanges: boolean;
+	onCloseProject: () => void;
+	onOpenProject: () => void;
+	onCreateNewProject: () => void;
+	onSaveProject: () => Promise<void>;
+}
+
+function ProjectMenu({
+	projectName,
+	hasUnsavedChanges,
+	onCloseProject,
+	onOpenProject,
+	onCreateNewProject,
+	onSaveProject,
+}: ProjectMenuProps) {
+	const handleSave = useCallback(async () => {
+		await onSaveProject();
+	}, [onSaveProject]);
+
+	return (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button variant="ghost" className="gap-2">
+					<span className="font-medium">{projectName || "Project"}</span>
+					{hasUnsavedChanges && (
+						<span className="h-2 w-2 rounded-full bg-amber-500" />
+					)}
+					<ChevronDown className="h-4 w-4 opacity-50" />
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="start" className="w-56">
+				<DropdownMenuLabel>Project</DropdownMenuLabel>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={handleSave} disabled={!hasUnsavedChanges}>
+					<Save className="mr-2 h-4 w-4" />
+					Save Project
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={onOpenProject}>
+					<FolderOpen className="mr-2 h-4 w-4" />
+					Open Project
+				</DropdownMenuItem>
+				<DropdownMenuItem onClick={onCreateNewProject}>
+					<FolderPlus className="mr-2 h-4 w-4" />
+					Create New Project
+				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuItem onClick={onCloseProject} variant="destructive">
+					<XCircle className="mr-2 h-4 w-4" />
+					Close Project
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
 }
 
