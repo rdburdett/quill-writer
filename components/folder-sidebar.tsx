@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { FolderNode } from "@/lib/project/types";
 import { Button } from "@/components/ui/button";
-import { dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { TextDragData } from "@/components/tab-system";
 
 // =============================================================================
@@ -56,6 +56,8 @@ export interface FolderSidebarProps {
 	onRenameFile?: (filePath: string, currentName: string) => void;
 	/** Called when text is dropped on a file */
 	onDropText?: (filePath: string, dragData: TextDragData) => void;
+	/** Called when a file is moved to a new location */
+	onMoveFile?: (fromPath: string, toPath: string) => void;
 }
 
 // =============================================================================
@@ -78,6 +80,7 @@ export function FolderSidebar({
 	onNewFolder,
 	onRenameFile,
 	onDropText,
+	onMoveFile,
 }: FolderSidebarProps) {
 	const [hoveredPath, setHoveredPath] = useState<string | null>(null);
 
@@ -209,6 +212,7 @@ export function FolderSidebar({
 						onNewFolder={onNewFolder}
 						onRenameFile={onRenameFile}
 						onDropText={onDropText}
+						onMoveFile={onMoveFile}
 					/>
 				)}
 			</div>
@@ -238,6 +242,7 @@ interface TreeNodesProps {
 	onNewFolder?: (parentPath: string) => void;
 	onRenameFile?: (filePath: string, currentName: string) => void;
 	onDropText?: (filePath: string, dragData: TextDragData) => void;
+	onMoveFile?: (fromPath: string, toPath: string) => void;
 }
 
 function TreeNodes({
@@ -253,6 +258,7 @@ function TreeNodes({
 	onNewFolder,
 	onRenameFile,
 	onDropText,
+	onMoveFile,
 }: TreeNodesProps) {
 	return (
 		<>
@@ -271,6 +277,7 @@ function TreeNodes({
 					onNewFolder={onNewFolder}
 					onRenameFile={onRenameFile}
 					onDropText={onDropText}
+					onMoveFile={onMoveFile}
 					expandedPaths={expandedPaths}
 					selectedPath={selectedPath}
 					hoveredPath={hoveredPath}
@@ -300,6 +307,7 @@ interface TreeNodeProps {
 	onNewFolder?: (parentPath: string) => void;
 	onRenameFile?: (filePath: string, currentName: string) => void;
 	onDropText?: (filePath: string, dragData: TextDragData) => void;
+	onMoveFile?: (fromPath: string, toPath: string) => void;
 }
 
 function TreeNode({
@@ -318,39 +326,126 @@ function TreeNode({
 	onNewFolder,
 	onRenameFile,
 	onDropText,
+	onMoveFile,
 }: TreeNodeProps) {
 	const isFolder = node.type === "folder";
 	const hasChildren = isFolder && node.children && node.children.length > 0;
 	const paddingLeft = 12 + depth * 16;
 	const nodeRef = useRef<HTMLDivElement>(null);
 	const [isDragOver, setIsDragOver] = useState(false);
+	const [isDragging, setIsDragging] = useState(false);
 
-	// Set up drop target for file nodes only
+	// Debug: Log on every render
+	useEffect(() => {
+		if (!isFolder) {
+			console.log("[FolderSidebar] TreeNode rendered:", node.path, "onMoveFile:", !!onMoveFile);
+		}
+	}, [node.path, isFolder, onMoveFile]);
+
+	// Set up draggable for file nodes
 	useEffect(() => {
 		const element = nodeRef.current;
-		if (!element || isFolder || !onDropText) return;
+		console.log("[FolderSidebar] Draggable useEffect:", node.path, "element:", !!element, "isFolder:", isFolder, "onMoveFile:", !!onMoveFile);
+		if (!element || isFolder || !onMoveFile) return;
+
+		console.log("[FolderSidebar] Setting up draggable for file:", node.path);
+
+		const cleanup = draggable({
+			element,
+			getInitialData: () => {
+				console.log("[FolderSidebar] Drag started for file:", node.path);
+				return {
+					type: "file",
+					filePath: node.path,
+				};
+			},
+			onDragStart: () => {
+				console.log("[FolderSidebar] onDragStart called for file:", node.path);
+				setIsDragging(true);
+				// Clear any existing selection
+				window.getSelection()?.removeAllRanges();
+			},
+			onDrop: () => {
+				console.log("[FolderSidebar] onDrop called for file:", node.path);
+				setIsDragging(false);
+			},
+		});
+
+		return cleanup;
+	}, [node.path, isFolder, onMoveFile]);
+
+	// Set up drop target for folders (to accept file drops)
+	useEffect(() => {
+		const element = nodeRef.current;
+		if (!element || !isFolder || !onMoveFile) return;
+
+		return dropTargetForElements({
+			element,
+			getData: ({ source }) => {
+				if (source.data.type === "file") {
+					return source.data as unknown as Record<string, unknown>;
+				}
+				return {};
+			},
+			canDrop: ({ source }) => {
+				// Can drop files, but not on themselves or their parent
+				if (source.data.type === "file") {
+					const filePath = source.data.filePath as string;
+					// Don't allow dropping on the same path or a parent folder
+					return filePath !== node.path && !filePath.startsWith(node.path + "/");
+				}
+				return false;
+			},
+			onDragEnter: () => {
+				setIsDragOver(true);
+			},
+			onDragLeave: () => {
+				setIsDragOver(false);
+			},
+			onDrop: ({ source }) => {
+				setIsDragOver(false);
+				if (source.data.type === "file" && onMoveFile) {
+					const filePath = source.data.filePath as string;
+					const fileName = filePath.split("/").pop() || "";
+					const newPath = node.path ? `${node.path}/${fileName}` : fileName;
+					onMoveFile(filePath, newPath);
+				}
+			},
+		});
+	}, [node.path, isFolder, onMoveFile]);
+
+	// Set up drop target for file nodes (for text drops and file drops)
+	useEffect(() => {
+		const element = nodeRef.current;
+		if (!element || isFolder) return;
 
 		let hoverTimeout: ReturnType<typeof setTimeout> | null = null;
 
 		return dropTargetForElements({
 			element,
 			getData: ({ source }) => {
-				if (source.data.type === "text-block") {
+				if (source.data.type === "text-block" || source.data.type === "file") {
 					return source.data as unknown as Record<string, unknown>;
 				}
 				return {};
 			},
 			canDrop: ({ source }) => {
-				return source.data.type === "text-block";
+				if (source.data.type === "text-block") {
+					return true;
+				}
+				if (source.data.type === "file") {
+					const filePath = source.data.filePath as string;
+					// Don't allow dropping on the same file
+					return filePath !== node.path;
+				}
+				return false;
 			},
 			onDragEnter: ({ source }) => {
-				console.log("[FolderSidebar] Drag enter on file:", node.path, "Source:", source.data);
 				setIsDragOver(true);
-				// Open file after a short delay when hovering (to avoid flickering)
-				if (source.data.type === "text-block") {
+				// Open file after a short delay when hovering text blocks (to avoid flickering)
+				if (source.data.type === "text-block" && onDropText) {
 					hoverTimeout = setTimeout(() => {
 						if (!isFolder) {
-							console.log("[FolderSidebar] Opening file:", node.path);
 							onSelect(node.path);
 						}
 					}, 300); // 300ms delay before opening
@@ -372,18 +467,40 @@ function TreeNode({
 				if (source.data.type === "text-block" && onDropText) {
 					const dragData = source.data as unknown as TextDragData;
 					onDropText(node.path, dragData);
+				} else if (source.data.type === "file" && onMoveFile) {
+					const filePath = source.data.filePath as string;
+					// Don't move to the same location
+					if (filePath !== node.path) {
+						// Get the folder path of the target file
+						const pathParts = node.path.split("/");
+						const fileName = filePath.split("/").pop() || "";
+						if (pathParts.length > 1) {
+							// File is in a folder
+							pathParts.pop(); // Remove filename
+							const folderPath = pathParts.join("/");
+							const newPath = `${folderPath}/${fileName}`;
+							onMoveFile(filePath, newPath);
+						} else {
+							// File is at root, move to root
+							onMoveFile(filePath, fileName);
+						}
+					}
 				}
 			},
 		});
-	}, [node.path, isFolder, onDropText, onSelect]);
+	}, [node.path, isFolder, onDropText, onSelect, onMoveFile]);
 
 	const handleClick = useCallback(() => {
+		// Don't handle click if we just finished dragging
+		if (isDragging) {
+			return;
+		}
 		if (isFolder) {
 			onToggleFolder(node.path);
 		} else {
 			onSelect(node.path);
 		}
-	}, [isFolder, node.path, onSelect, onToggleFolder]);
+	}, [isFolder, node.path, onSelect, onToggleFolder, isDragging]);
 
 	const handleKeyDown = useCallback(
 		(e: React.KeyboardEvent) => {
@@ -403,18 +520,32 @@ function TreeNode({
 				tabIndex={0}
 				aria-selected={isSelected}
 				aria-expanded={isFolder ? isExpanded : undefined}
+				draggable={!isFolder && !!onMoveFile}
 				className={cn(
 					"group flex cursor-pointer items-center gap-1 py-1 pr-2 text-sm transition-colors",
 					"hover:bg-accent/50",
 					isSelected && "bg-accent text-accent-foreground",
 					!isSelected && "text-foreground/80",
-					isDragOver && !isFolder && "bg-primary/20 border-l-4 border-l-primary shadow-sm"
+					isDragOver && !isFolder && "bg-primary/20 border-l-4 border-l-primary shadow-sm",
+					isDragOver && isFolder && "bg-primary/10 border-l-4 border-l-primary",
+					isDragging && "opacity-50"
 				)}
-				style={{ paddingLeft }}
+				style={{
+					paddingLeft,
+					userSelect: !isFolder && onMoveFile ? 'none' : undefined,
+					WebkitUserSelect: !isFolder && onMoveFile ? 'none' : undefined,
+					cursor: !isFolder && onMoveFile ? 'grab' : 'pointer',
+				}}
 				onClick={handleClick}
 				onKeyDown={handleKeyDown}
 				onMouseEnter={() => onHover(node.path)}
 				onMouseLeave={() => onHover(null)}
+				onDragStart={() => {
+					// Let pragmatic-drag-and-drop handle the drag
+					if (!isFolder && onMoveFile) {
+						console.log("[FolderSidebar] Native dragstart for:", node.path);
+					}
+				}}
 			>
 				{/* Expand/Collapse Arrow */}
 				<span className="flex h-4 w-4 items-center justify-center">
@@ -439,7 +570,15 @@ function TreeNode({
 				)}
 
 				{/* Name */}
-				<span className="flex-1 truncate">{node.name}</span>
+				<span 
+					className="flex-1 truncate"
+					style={{
+						userSelect: !isFolder && onMoveFile ? 'none' : undefined,
+						WebkitUserSelect: !isFolder && onMoveFile ? 'none' : undefined,
+					}}
+				>
+					{node.name}
+				</span>
 
 				{/* Word count for files */}
 				{!isFolder && node.wordCount !== undefined && (
@@ -511,6 +650,8 @@ function TreeNode({
 							onNewFile={onNewFile}
 							onNewFolder={onNewFolder}
 							onRenameFile={onRenameFile}
+							onDropText={onDropText}
+							onMoveFile={onMoveFile}
 						/>
 					)}
 					{/* Add New File button at bottom of folder */}
