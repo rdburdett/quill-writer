@@ -335,38 +335,23 @@ function TreeNode({
 	const [isDragOver, setIsDragOver] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 
-	// Debug: Log on every render
-	useEffect(() => {
-		if (!isFolder) {
-			console.log("[FolderSidebar] TreeNode rendered:", node.path, "onMoveFile:", !!onMoveFile);
-		}
-	}, [node.path, isFolder, onMoveFile]);
-
 	// Set up draggable for file nodes
 	useEffect(() => {
 		const element = nodeRef.current;
-		console.log("[FolderSidebar] Draggable useEffect:", node.path, "element:", !!element, "isFolder:", isFolder, "onMoveFile:", !!onMoveFile);
 		if (!element || isFolder || !onMoveFile) return;
-
-		console.log("[FolderSidebar] Setting up draggable for file:", node.path);
 
 		const cleanup = draggable({
 			element,
-			getInitialData: () => {
-				console.log("[FolderSidebar] Drag started for file:", node.path);
-				return {
-					type: "file",
-					filePath: node.path,
-				};
-			},
+			getInitialData: () => ({
+				type: "file",
+				filePath: node.path,
+			}),
 			onDragStart: () => {
-				console.log("[FolderSidebar] onDragStart called for file:", node.path);
 				setIsDragging(true);
 				// Clear any existing selection
 				window.getSelection()?.removeAllRanges();
 			},
 			onDrop: () => {
-				console.log("[FolderSidebar] onDrop called for file:", node.path);
 				setIsDragging(false);
 			},
 		});
@@ -388,11 +373,15 @@ function TreeNode({
 				return {};
 			},
 			canDrop: ({ source }) => {
-				// Can drop files, but not on themselves or their parent
+				// Can drop files, but not if the file is already directly in this folder
 				if (source.data.type === "file") {
 					const filePath = source.data.filePath as string;
-					// Don't allow dropping on the same path or a parent folder
-					return filePath !== node.path && !filePath.startsWith(node.path + "/");
+					// Get the parent folder of the file being dragged
+					const pathParts = filePath.split("/");
+					pathParts.pop(); // Remove filename
+					const fileParentFolder = pathParts.join("/");
+					// Don't allow dropping if the file is already directly in this folder
+					return fileParentFolder !== node.path;
 				}
 				return false;
 			},
@@ -540,12 +529,6 @@ function TreeNode({
 				onKeyDown={handleKeyDown}
 				onMouseEnter={() => onHover(node.path)}
 				onMouseLeave={() => onHover(null)}
-				onDragStart={() => {
-					// Let pragmatic-drag-and-drop handle the drag
-					if (!isFolder && onMoveFile) {
-						console.log("[FolderSidebar] Native dragstart for:", node.path);
-					}
-				}}
 			>
 				{/* Expand/Collapse Arrow */}
 				<span className="flex h-4 w-4 items-center justify-center">
