@@ -251,7 +251,7 @@ export function NovelEditor({
 		if (!element || !sourceFilePath || !editorInstance) return;
 
 		// Find the ProseMirror editor content element
-		const proseMirrorElement = element.querySelector(".ProseMirror");
+		const proseMirrorElement = element.querySelector(".ProseMirror") as HTMLElement | null;
 		if (!proseMirrorElement) return;
 
 		// Track if we're currently in a Tiptap drag operation
