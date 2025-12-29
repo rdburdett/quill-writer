@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEditorSettingsContext } from "@/components/theme-provider";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 
 // =============================================================================
@@ -51,6 +52,7 @@ export function TabSystem({
 	onDropText,
 	children,
 }: TabSystemProps) {
+	const { showBorders } = useEditorSettingsContext();
 	const [draggedTabPath, setDraggedTabPath] = useState<string | null>(null);
 	const [dragOverTabPath, setDragOverTabPath] = useState<string | null>(null);
 	const [dragOverTabBar, setDragOverTabBar] = useState(false);
@@ -59,7 +61,7 @@ export function TabSystem({
 		<div className="flex h-full flex-col">
 			{/* Tab Bar */}
 			<div
-				className="flex border-b border-border bg-muted/30"
+				className={cn("flex bg-muted/30", showBorders && "border-b border-border")}
 				onDragOver={(e) => {
 					e.preventDefault();
 					setDragOverTabBar(true);
@@ -156,6 +158,7 @@ function TabItem({
 	onDrop,
 	onReorder,
 }: TabItemProps) {
+	const { showBorders } = useEditorSettingsContext();
 	const tabRef = useRef<HTMLDivElement>(null);
 	const [isDraggedOver, setIsDraggedOver] = useState(false);
 
@@ -255,7 +258,8 @@ function TabItem({
 		<div
 			ref={tabRef}
 			className={cn(
-				"group flex cursor-pointer items-center gap-2 border-r border-border px-3 py-2 text-sm transition-colors",
+				"group flex cursor-pointer items-center gap-2 px-3 py-2 text-sm transition-colors",
+				showBorders && "border-r border-border",
 				"hover:bg-accent/50",
 				isActive && "bg-background text-foreground",
 				!isActive && "text-foreground/80",

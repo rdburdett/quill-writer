@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { SubthemeSelector } from "@/components/theme/subtheme-selector";
 import { FontSelector } from "@/components/settings/font-selector";
 import { TabSizeSelector } from "@/components/settings/tab-size-selector";
+import { BorderToggle } from "@/components/settings/border-toggle";
 
 export default function SettingsPage() {
 	return (
@@ -49,6 +50,16 @@ export default function SettingsPage() {
 							</p>
 						</div>
 						<SubthemeSelector />
+					</div>
+
+					<div className="flex flex-col items-start justify-between gap-4 border-t pt-6 sm:flex-row sm:items-center">
+						<div>
+							<h3 className="text-sm font-medium">Show Borders</h3>
+							<p className="mt-1 text-sm text-muted-foreground">
+								Display borders for higher contrast.
+							</p>
+						</div>
+						<BorderToggle />
 					</div>
 				</section>
 
