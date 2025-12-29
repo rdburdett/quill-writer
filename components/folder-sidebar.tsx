@@ -12,12 +12,11 @@ import {
 	FilePlus,
 	Pencil,
 	RefreshCw,
-	PanelLeftClose,
-	PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { FolderNode } from "@/lib/project/types";
 import { Button } from "@/components/ui/button";
+import { useEditorSettingsContext } from "@/components/theme-provider";
 import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { TextDragData } from "@/components/tab-system";
 
@@ -36,10 +35,6 @@ export interface FolderSidebarProps {
 	searchQuery: string;
 	/** Whether a file is currently saving */
 	isSaving?: boolean;
-	/** Whether the sidebar is collapsed */
-	isCollapsed?: boolean;
-	/** Called when collapse/expand is toggled */
-	onToggleCollapse?: () => void;
 	/** Called when a file is selected */
 	onSelect: (path: string) => void;
 	/** Called when a folder is toggled */
@@ -70,8 +65,6 @@ export function FolderSidebar({
 	expandedPaths,
 	searchQuery,
 	isSaving,
-	isCollapsed = false,
-	onToggleCollapse,
 	onSelect,
 	onToggleFolder,
 	onSearchChange,
@@ -83,50 +76,14 @@ export function FolderSidebar({
 	onMoveFile,
 }: FolderSidebarProps) {
 	const [hoveredPath, setHoveredPath] = useState<string | null>(null);
-
-	// If collapsed, show only header with expand icon
-	if (isCollapsed) {
-		return (
-			<div className="flex h-full flex-col border-r border-border bg-muted/30 transition-all">
-				{/* Header */}
-				<div className="flex items-center justify-between border-b border-border px-3 py-2">
-					<div className="flex items-center gap-2">
-						{onToggleCollapse && (
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-6 w-6"
-								onClick={onToggleCollapse}
-								title="Expand sidebar"
-								aria-label="Expand sidebar"
-							>
-								<PanelLeftOpen className="h-3.5 w-3.5" />
-							</Button>
-						)}
-					</div>
-				</div>
-			</div>
-		);
-	}
+	const { showBorders } = useEditorSettingsContext();
 
 	return (
-		<div className="flex h-full flex-col border-r border-border bg-muted/30 transition-all">
+		<div className="flex h-full flex-col bg-muted/30 transition-all">
 			{/* Header */}
-			<div className="flex items-center justify-between border-b border-border px-3 py-2">
+			<div className={cn("flex items-center justify-between px-3 py-2", showBorders && "border-b border-border")}>
 				<div className="flex items-center gap-2">
-					<span className="text-sm font-medium text-foreground">Files</span>
-					{onToggleCollapse && (
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-6 w-6"
-							onClick={onToggleCollapse}
-							title="Collapse sidebar"
-							aria-label="Collapse sidebar"
-						>
-							<PanelLeftClose className="h-3.5 w-3.5" />
-						</Button>
-					)}
+					<span className="text-sm font-medium text-foreground">Browser</span>
 				</div>
 				<div className="flex items-center gap-1">
 					{isSaving && (
@@ -171,7 +128,7 @@ export function FolderSidebar({
 			</div>
 
 			{/* Search */}
-			<div className="border-b border-border px-3 py-2">
+			<div className={cn("px-3 py-2", showBorders && "border-b border-border")}>
 				<div className="relative">
 					<Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
 					<input
@@ -179,7 +136,7 @@ export function FolderSidebar({
 						value={searchQuery}
 						onChange={(e) => onSearchChange(e.target.value)}
 						placeholder="Search files..."
-						className="w-full rounded-md border border-input bg-background px-8 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+						className="w-full rounded-md bg-background px-8 py-1.5 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 					/>
 					{searchQuery && (
 						<button
@@ -218,7 +175,7 @@ export function FolderSidebar({
 			</div>
 
 			{/* Stats */}
-			<div className="border-t border-border px-3 py-2">
+			<div className={cn("px-3 py-2", showBorders && "border-t border-border")}>
 				<TreeStats tree={tree} />
 			</div>
 		</div>

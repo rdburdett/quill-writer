@@ -15,6 +15,7 @@ import {
 	type FontValue,
 	type TabSize,
 } from "@/hooks/use-editor-settings";
+import { useUISettings } from "@/hooks/use-ui-settings";
 
 type Mode = "light" | "dark";
 
@@ -30,8 +31,10 @@ type EditorSettingsContextValue = {
 	tabSize: TabSize;
 	fonts: typeof fonts;
 	tabSizes: typeof tabSizes;
+	showBorders: boolean;
 	updateFont: (value: FontValue) => void;
 	updateTabSize: (value: TabSize) => void;
+	updateShowBorders: (value: boolean) => void;
 };
 
 const SubthemeContext = React.createContext<SubthemeContextValue | undefined>(
@@ -69,6 +72,7 @@ function SubthemeSync({ children }: { children: React.ReactNode }) {
 		updateFont,
 		updateTabSize,
 	} = useEditorSettings();
+	const { showBorders, updateShowBorders } = useUISettings();
 
 	return (
 		<SubthemeContext.Provider
@@ -80,8 +84,10 @@ function SubthemeSync({ children }: { children: React.ReactNode }) {
 					tabSize,
 					fonts,
 					tabSizes,
+					showBorders,
 					updateFont,
 					updateTabSize,
+					updateShowBorders,
 				}}
 			>
 				{children}

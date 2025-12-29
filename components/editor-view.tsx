@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Settings, X, AlertTriangle, RefreshCw, FolderOpen, FolderPlus, Save, XCircle, ChevronDown } from "lucide-react";
+import { Settings, X, AlertTriangle, RefreshCw, FolderOpen, FolderPlus, Save, XCircle, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -16,9 +16,11 @@ import { NovelEditor } from "@/components/novel-editor";
 import { FolderSidebar } from "@/components/folder-sidebar";
 import { TabSystem, type Tab, type TextDragData } from "@/components/tab-system";
 import { useProjectContext } from "@/components/project-provider";
+import { useEditorSettingsContext } from "@/components/theme-provider";
 import { createBlock, moveBlock } from "@/lib/project/loader";
 import { createDirectory, readTextFile, writeTextFile } from "@/lib/filesystem";
 import { titleToFilename } from "@/lib/filesystem/scanner";
+import { cn } from "@/lib/utils";
 
 // =============================================================================
 // Editor View Component
@@ -26,6 +28,7 @@ import { titleToFilename } from "@/lib/filesystem/scanner";
 
 export function EditorView() {
 	const { project, block, folderTree } = useProjectContext();
+	const { showBorders } = useEditorSettingsContext();
 	const [newFileFolder, setNewFileFolder] = useState<string | null>(null);
 	const [newFileName, setNewFileName] = useState("");
 	const [isCreating, setIsCreating] = useState(false);
@@ -432,121 +435,135 @@ export function EditorView() {
 	}, []);
 
 	return (
-		<div className="flex h-screen">
-			{/* Sidebar */}
-			<div className={isSidebarCollapsed ? "w-10 shrink-0" : "w-64 shrink-0"}>
-				<FolderSidebar
-					tree={folderTree.filteredTree}
-					selectedPath={folderTree.selectedPath}
-					expandedPaths={folderTree.expandedPaths}
-					searchQuery={folderTree.searchQuery}
-					isSaving={block.activeBlockPath ? block.savingBlocks.has(block.activeBlockPath) : false}
-					isCollapsed={isSidebarCollapsed}
-					onToggleCollapse={handleToggleSidebar}
-					onSelect={handleFileSelect}
-					onToggleFolder={folderTree.toggleExpanded}
-					onSearchChange={folderTree.setSearchQuery}
-					onRefresh={project.refreshTree}
-					onNewFile={handleNewFileRequest}
-					onNewFolder={handleNewFolderRequest}
-					onRenameFile={handleRenameFileRequest}
-					onDropText={handleDropText}
-					onMoveFile={handleMoveFile}
-				/>
-			</div>
-
-			{/* New File Dialog */}
-			{newFileFolder !== null && (
-				<NewFileDialog
-					folderPath={newFileFolder}
-					fileName={newFileName}
-					isCreating={isCreating}
-					onFileNameChange={setNewFileName}
-					onCreate={handleCreateFile}
-					onCancel={handleCancelNewFile}
-				/>
-			)}
-
-			{/* Rename File Dialog */}
-			{renameFilePath !== null && (
-				<RenameFileDialog
-					currentPath={renameFilePath}
-					fileName={renameFileName}
-					isRenaming={isRenaming}
-					onFileNameChange={setRenameFileName}
-					onRename={handleRenameFile}
-					onCancel={handleCancelRename}
-				/>
-			)}
-
-			{/* New Folder Dialog */}
-			{newFolderParent !== null && (
-				<NewFolderDialog
-					parentPath={newFolderParent}
-					folderName={newFolderName}
-					isCreating={isCreatingFolder}
-					onFolderNameChange={setNewFolderName}
-					onCreate={handleCreateFolder}
-					onCancel={handleCancelNewFolder}
-				/>
-			)}
-
-			{/* Main Editor Area */}
-			<div className="flex flex-1 flex-col">
-				{/* Header Bar */}
-				<div className="flex items-center justify-between border-b border-border px-4 py-2">
-					<div className="flex items-center gap-4">
-						{/* Project Menu */}
-						<ProjectMenu
-							projectName={project.project?.name}
-							hasUnsavedChanges={project.hasUnsavedChanges}
-							onCloseProject={project.closeProject}
-							onOpenProject={project.openProject}
-							onCreateNewProject={project.createNewProject}
-							onSaveProject={project.saveProject}
-						/>
-						
-						{/* File Info */}
-						<div className="flex items-center gap-2">
-							{block.getActiveBlock() ? (
-								<>
-									<span className="font-medium">{block.getActiveBlock()?.title}</span>
-									{block.unsavedBlocks.has(block.activeBlockPath ?? "") && (
-										<span className="text-xs text-muted-foreground">
-											(unsaved)
-										</span>
-									)}
-									{block.savingBlocks.has(block.activeBlockPath ?? "") && (
-										<span className="text-xs text-muted-foreground animate-pulse">
-											Saving...
-										</span>
-									)}
-								</>
-							) : (
-								<span className="text-muted-foreground">
-									Select a file to edit
-								</span>
-							)}
-						</div>
-					</div>
-
+		<div className="flex h-screen flex-col">
+			{/* Header Bar - Full Width */}
+			<div className={cn("flex items-center justify-between px-4 py-2", showBorders && "border-b border-border")}>
+				<div className="flex items-center gap-4">
+					{/* Sidebar Toggle Button */}
+					<Button
+						variant="ghost"
+						size="icon"
+						className="h-8 w-8"
+						onClick={handleToggleSidebar}
+						title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+						aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+					>
+						{isSidebarCollapsed ? (
+							<PanelLeftOpen className="h-4 w-4" />
+						) : (
+							<PanelLeftClose className="h-4 w-4" />
+						)}
+					</Button>
+					
+					{/* Project Menu */}
+					<ProjectMenu
+						projectName={project.project?.name}
+						hasUnsavedChanges={project.hasUnsavedChanges}
+						onCloseProject={project.closeProject}
+						onOpenProject={project.openProject}
+						onCreateNewProject={project.createNewProject}
+						onSaveProject={project.saveProject}
+					/>
+					
+					{/* File Info */}
 					<div className="flex items-center gap-2">
-						{block.getActiveBlock() && (
-							<span className="text-xs text-muted-foreground">
-								{block.getActiveBlock()?.wordCount.toLocaleString()} words
+						{block.getActiveBlock() ? (
+							<>
+								<span className="font-medium">{block.getActiveBlock()?.title}</span>
+								{block.unsavedBlocks.has(block.activeBlockPath ?? "") && (
+									<span className="text-xs text-muted-foreground">
+										(unsaved)
+									</span>
+								)}
+								{block.savingBlocks.has(block.activeBlockPath ?? "") && (
+									<span className="text-xs text-muted-foreground animate-pulse">
+										Saving...
+									</span>
+								)}
+							</>
+						) : (
+							<span className="text-muted-foreground">
+								Select a file to edit
 							</span>
 						)}
-						<Link href="/settings" aria-label="Open settings">
-							<Button
-								variant="ghost"
-								size="icon"
-								className="h-8 w-8 opacity-50 transition-opacity hover:opacity-100"
-							>
-								<Settings className="h-4 w-4" />
-							</Button>
-						</Link>
 					</div>
 				</div>
+
+				<div className="flex items-center gap-2">
+					<Link href="/settings" aria-label="Open settings">
+						<Button
+							variant="ghost"
+							size="icon"
+							className="h-8 w-8 opacity-50 transition-opacity hover:opacity-100"
+						>
+							<Settings className="h-4 w-4" />
+						</Button>
+					</Link>
+				</div>
+			</div>
+
+			{/* Content Area with Sidebar and Editor */}
+			<div className="flex flex-1 overflow-hidden">
+				{/* Sidebar */}
+				{!isSidebarCollapsed && (
+					<div className="w-64 shrink-0 h-full">
+						<FolderSidebar
+							tree={folderTree.filteredTree}
+							selectedPath={folderTree.selectedPath}
+							expandedPaths={folderTree.expandedPaths}
+							searchQuery={folderTree.searchQuery}
+							isSaving={block.activeBlockPath ? block.savingBlocks.has(block.activeBlockPath) : false}
+							onSelect={handleFileSelect}
+							onToggleFolder={folderTree.toggleExpanded}
+							onSearchChange={folderTree.setSearchQuery}
+							onRefresh={project.refreshTree}
+							onNewFile={handleNewFileRequest}
+							onNewFolder={handleNewFolderRequest}
+							onRenameFile={handleRenameFileRequest}
+							onDropText={handleDropText}
+							onMoveFile={handleMoveFile}
+						/>
+					</div>
+				)}
+
+				{/* New File Dialog */}
+				{newFileFolder !== null && (
+					<NewFileDialog
+						folderPath={newFileFolder}
+						fileName={newFileName}
+						isCreating={isCreating}
+						onFileNameChange={setNewFileName}
+						onCreate={handleCreateFile}
+						onCancel={handleCancelNewFile}
+					/>
+				)}
+
+				{/* Rename File Dialog */}
+				{renameFilePath !== null && (
+					<RenameFileDialog
+						currentPath={renameFilePath}
+						fileName={renameFileName}
+						isRenaming={isRenaming}
+						onFileNameChange={setRenameFileName}
+						onRename={handleRenameFile}
+						onCancel={handleCancelRename}
+					/>
+				)}
+
+				{/* New Folder Dialog */}
+				{newFolderParent !== null && (
+					<NewFolderDialog
+						parentPath={newFolderParent}
+						folderName={newFolderName}
+						isCreating={isCreatingFolder}
+						onFolderNameChange={setNewFolderName}
+						onCreate={handleCreateFolder}
+						onCancel={handleCancelNewFolder}
+					/>
+				)}
+
+				{/* Main Editor Area */}
+				<div className="flex flex-1 flex-col overflow-hidden">
 
 				{/* External Modification Warning */}
 				{block.activeBlockPath && block.externallyModifiedBlocks.has(block.activeBlockPath) && (
@@ -600,15 +617,24 @@ export function EditorView() {
 					)}
 				</TabSystem>
 
-				{/* Footer */}
-				<div className="flex items-center justify-center border-t border-border py-2">
-					<p className="text-xs text-muted-foreground/60">
-						Press{" "}
-						<kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
-							/
-						</kbd>{" "}
-						for commands
-					</p>
+					{/* Footer */}
+					<div className={cn("flex items-center justify-between px-4 py-2", showBorders && "border-t border-border")}>
+						<div className="flex-1" />
+						<p className="text-xs text-muted-foreground/60">
+							Press{" "}
+							<kbd className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+								/
+							</kbd>{" "}
+							for commands
+						</p>
+						<div className="flex-1 text-right">
+							{block.getActiveBlock() && (
+								<span className="text-xs text-muted-foreground/60">
+									{block.getActiveBlock()?.wordCount.toLocaleString()} words
+								</span>
+							)}
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>
