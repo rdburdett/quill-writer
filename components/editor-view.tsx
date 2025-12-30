@@ -2,7 +2,7 @@
 
 import { useCallback, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Settings, X, AlertTriangle, RefreshCw, FolderOpen, FolderPlus, Save, XCircle, ChevronDown, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Feather, X, AlertTriangle, RefreshCw, FolderOpen, FolderPlus, Save, XCircle, PanelLeftClose, PanelLeftOpen, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -437,7 +437,7 @@ export function EditorView() {
 	return (
 		<div className="flex h-screen flex-col">
 			{/* Header Bar - Full Width */}
-			<div className={cn("flex items-center justify-between px-4 py-2", showBorders && "border-b border-border")}>
+			<div className={cn("flex items-center justify-between bg-muted/30 px-4 py-2", showBorders && "border-b border-border")}>
 				<div className="flex items-center gap-4">
 					{/* Sidebar Toggle Button */}
 					<Button
@@ -455,20 +455,19 @@ export function EditorView() {
 						)}
 					</Button>
 					
-					{/* Project Menu */}
-					<ProjectMenu
-						projectName={project.project?.name}
-						hasUnsavedChanges={project.hasUnsavedChanges}
-						onCloseProject={project.closeProject}
-						onOpenProject={project.openProject}
-						onCreateNewProject={project.createNewProject}
-						onSaveProject={project.saveProject}
-					/>
+					{/* Project Name & Status */}
+					<div className="flex items-center gap-2">
+						<span className="font-medium">{project.project?.name || "Quill"}</span>
+						{project.hasUnsavedChanges && (
+							<span className="h-2 w-2 rounded-full bg-amber-500" title="Unsaved changes" />
+						)}
+					</div>
 					
 					{/* File Info */}
 					<div className="flex items-center gap-2">
 						{block.getActiveBlock() ? (
 							<>
+								<span className="text-muted-foreground">/</span>
 								<span className="font-medium">{block.getActiveBlock()?.title}</span>
 								{block.unsavedBlocks.has(block.activeBlockPath ?? "") && (
 									<span className="text-xs text-muted-foreground">
@@ -481,25 +480,18 @@ export function EditorView() {
 									</span>
 								)}
 							</>
-						) : (
-							<span className="text-muted-foreground">
-								Select a file to edit
-							</span>
-						)}
+						) : null}
 					</div>
 				</div>
 
-				<div className="flex items-center gap-2">
-					<Link href="/settings" aria-label="Open settings">
-						<Button
-							variant="ghost"
-							size="icon"
-							className="h-8 w-8 opacity-50 transition-opacity hover:opacity-100"
-						>
-							<Settings className="h-4 w-4" />
-						</Button>
-					</Link>
-				</div>
+				{/* App Menu */}
+				<AppMenu
+					hasUnsavedChanges={project.hasUnsavedChanges}
+					onSaveProject={project.saveProject}
+					onOpenProject={project.openProject}
+					onCreateNewProject={project.createNewProject}
+					onCloseProject={project.closeProject}
+				/>
 			</div>
 
 			{/* Content Area with Sidebar and Editor */}
@@ -618,7 +610,7 @@ export function EditorView() {
 				</TabSystem>
 
 					{/* Footer */}
-					<div className={cn("flex items-center justify-between px-4 py-2", showBorders && "border-t border-border")}>
+					<div className={cn("flex items-center justify-between bg-muted/30 px-4 py-2", showBorders && "border-t border-border")}>
 						<div className="flex-1" />
 						<p className="text-xs text-muted-foreground/60">
 							Press{" "}
@@ -642,26 +634,24 @@ export function EditorView() {
 }
 
 // =============================================================================
-// Project Menu
+// App Menu (Quill Icon Menu)
 // =============================================================================
 
-interface ProjectMenuProps {
-	projectName?: string;
+interface AppMenuProps {
 	hasUnsavedChanges: boolean;
-	onCloseProject: () => void;
+	onSaveProject: () => Promise<void>;
 	onOpenProject: () => void;
 	onCreateNewProject: () => void;
-	onSaveProject: () => Promise<void>;
+	onCloseProject: () => void;
 }
 
-function ProjectMenu({
-	projectName,
+function AppMenu({
 	hasUnsavedChanges,
-	onCloseProject,
+	onSaveProject,
 	onOpenProject,
 	onCreateNewProject,
-	onSaveProject,
-}: ProjectMenuProps) {
+	onCloseProject,
+}: AppMenuProps) {
 	const handleSave = useCallback(async () => {
 		await onSaveProject();
 	}, [onSaveProject]);
@@ -669,35 +659,46 @@ function ProjectMenu({
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="ghost" className="gap-2">
-					<span className="font-medium">{projectName || "Project"}</span>
+				<Button
+					variant="ghost"
+					size="icon"
+					className="h-8 w-8 relative"
+					aria-label="Open app menu"
+				>
+					<Feather className="h-4 w-4" />
 					{hasUnsavedChanges && (
-						<span className="h-2 w-2 rounded-full bg-amber-500" />
+						<span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500" />
 					)}
-					<ChevronDown className="h-4 w-4 opacity-50" />
 				</Button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="start" className="w-56">
+			<DropdownMenuContent align="end" className="w-56">
 				<DropdownMenuLabel>Project</DropdownMenuLabel>
 				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={handleSave} disabled={!hasUnsavedChanges}>
 					<Save className="mr-2 h-4 w-4" />
 					Save Project
 				</DropdownMenuItem>
-				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={onOpenProject}>
 					<FolderOpen className="mr-2 h-4 w-4" />
 					Open Project
 				</DropdownMenuItem>
 				<DropdownMenuItem onClick={onCreateNewProject}>
 					<FolderPlus className="mr-2 h-4 w-4" />
-					Create New Project
+					New Project
 				</DropdownMenuItem>
-				<DropdownMenuSeparator />
 				<DropdownMenuItem onClick={onCloseProject} variant="destructive">
 					<XCircle className="mr-2 h-4 w-4" />
 					Close Project
 				</DropdownMenuItem>
+				<DropdownMenuSeparator />
+				<DropdownMenuLabel>App</DropdownMenuLabel>
+				<DropdownMenuSeparator />
+				<Link href="/settings">
+					<DropdownMenuItem>
+						<Settings className="mr-2 h-4 w-4" />
+						Settings
+					</DropdownMenuItem>
+				</Link>
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);

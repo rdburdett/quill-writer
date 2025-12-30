@@ -79,7 +79,7 @@ export function FolderSidebar({
 	const { showBorders } = useEditorSettingsContext();
 
 	return (
-		<div className="flex h-full flex-col bg-muted/30 transition-all">
+		<div className={cn("flex h-full flex-col bg-muted/30 transition-all", showBorders && "border-r border-border")}>
 			{/* Header */}
 			<div className={cn("flex items-center justify-between px-3 py-2", showBorders && "border-b border-border")}>
 				<div className="flex items-center gap-2">
