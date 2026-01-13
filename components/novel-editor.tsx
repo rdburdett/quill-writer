@@ -17,8 +17,8 @@ import {
 	createSuggestionItems,
 	renderItems,
 	handleCommandNavigation,
-	useEditor,
 } from "novel";
+import type { Editor } from "@tiptap/core";
 import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import type { TextDragData } from "@/components/tab-system";
 
@@ -204,7 +204,7 @@ export function NovelEditor({
 	sourceFilePath,
 }: NovelEditorProps) {
 	const [jsonContent, setJsonContent] = useState<unknown>(null);
-	const [editorInstance, setEditorInstance] = useState<any>(null);
+	const [editorInstance, setEditorInstance] = useState<Editor | null>(null);
 	const editorRef = useRef<HTMLDivElement>(null);
 	const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const lastContentRef = useRef<string>(initialContent);
@@ -318,7 +318,7 @@ export function NovelEditor({
 				if (!editorInstance || !sourceFilePath) return {};
 
 				// Try to get selection from editor first
-				let selection = editorInstance.state.selection;
+				const selection = editorInstance.state.selection;
 				let selectedText = "";
 				let from = 0;
 				let to = 0;
