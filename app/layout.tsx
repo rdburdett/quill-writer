@@ -9,6 +9,7 @@ import {
 	Ubuntu,
 	Ubuntu_Mono,
 } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AppThemeProvider } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
@@ -83,6 +84,7 @@ export default function RootLayout({
 				)}
 			>
 				<AppThemeProvider>{children}</AppThemeProvider>
+				<Analytics />
 			</body>
 		</html>
 	);
