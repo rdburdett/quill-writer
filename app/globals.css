@@ -44,6 +44,39 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Agave Nerd Font */
+@font-face {
+	font-family: "AgaveNerdFont";
+	src: url("/fonts/agave/AgaveNerdFont-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "AgaveNerdFont";
+	src: url("/fonts/agave/AgaveNerdFont-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "AgaveNerdFontMono";
+	src: url("/fonts/agave/AgaveNerdFontMono-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "AgaveNerdFontMono";
+	src: url("/fonts/agave/AgaveNerdFontMono-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
   --radius: 0.625rem;
   --background: hsl(0 0% 99%);
@@ -227,32 +260,44 @@
 }
 
 /* Editor font switching */
-[data-editor-font="system"] .ProseMirror {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+[data-editor-font="system"] .ProseMirror,
+[data-editor-font="system"] .prose {
+  font-family: var(--font-geist-sans), system-ui, sans-serif !important;
 }
 
-[data-editor-font="serif"] .ProseMirror {
-  font-family: var(--font-lora), Georgia, serif;
+[data-editor-font="serif"] .ProseMirror,
+[data-editor-font="serif"] .prose {
+  font-family: var(--font-lora), Georgia, serif !important;
 }
 
-[data-editor-font="merriweather"] .ProseMirror {
-  font-family: var(--font-merriweather), Georgia, serif;
+[data-editor-font="merriweather"] .ProseMirror,
+[data-editor-font="merriweather"] .prose {
+  font-family: var(--font-merriweather), Georgia, serif !important;
 }
 
-[data-editor-font="inter"] .ProseMirror {
-  font-family: var(--font-inter), system-ui, sans-serif;
+[data-editor-font="inter"] .ProseMirror,
+[data-editor-font="inter"] .prose {
+  font-family: var(--font-inter), system-ui, sans-serif !important;
 }
 
-[data-editor-font="mono"] .ProseMirror {
-  font-family: var(--font-jetbrains), monospace;
+[data-editor-font="mono"] .ProseMirror,
+[data-editor-font="mono"] .prose {
+  font-family: var(--font-jetbrains), monospace !important;
 }
 
-[data-editor-font="ubuntu"] .ProseMirror {
-  font-family: var(--font-ubuntu), monospace;
+[data-editor-font="ubuntu"] .ProseMirror,
+[data-editor-font="ubuntu"] .prose {
+  font-family: var(--font-ubuntu), monospace !important;
 }
 
-[data-editor-font="mono2"] .ProseMirror {
-  font-family: var(--font-ubuntu-mono), monospace;
+[data-editor-font="mono2"] .ProseMirror,
+[data-editor-font="mono2"] .prose {
+  font-family: var(--font-ubuntu-mono), monospace !important;
+}
+
+[data-editor-font="agave"] .ProseMirror,
+[data-editor-font="agave"] .prose {
+  font-family: "AgaveNerdFontMono", "AgaveNerdFont", monospace !important;
 }
 
 .ProseMirror h1 {
