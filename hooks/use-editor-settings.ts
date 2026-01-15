@@ -10,6 +10,7 @@ export const fonts = [
 	{ value: "mono", label: "JetBrains Mono" },
 	{ value: "ubuntu", label: "Ubuntu" },
 	{ value: "mono2", label: "Ubuntu Mono" },
+	{ value: "agave", label: "Agave Nerd Font" },
 ] as const;
 
 export const tabSizes = [2, 4, 8] as const;
@@ -25,6 +26,7 @@ export const fontFamilyMap: Record<FontValue, string> = {
 	mono: "var(--font-jetbrains), monospace",
 	ubuntu: "var(--font-ubuntu), monospace",
 	mono2: "var(--font-ubuntu-mono), monospace",
+	agave: '"AgaveNerdFontMono", "AgaveNerdFont", monospace',
 };
 export type TabSize = (typeof tabSizes)[number];
 

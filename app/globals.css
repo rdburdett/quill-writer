@@ -44,6 +44,39 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Agave Nerd Font */
+@font-face {
+	font-family: "AgaveNerdFont";
+	src: url("/fonts/agave/AgaveNerdFont-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "AgaveNerdFont";
+	src: url("/fonts/agave/AgaveNerdFont-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "AgaveNerdFontMono";
+	src: url("/fonts/agave/AgaveNerdFontMono-Regular.ttf") format("truetype");
+	font-weight: 400;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: "AgaveNerdFontMono";
+	src: url("/fonts/agave/AgaveNerdFontMono-Bold.ttf") format("truetype");
+	font-weight: 700;
+	font-style: normal;
+	font-display: swap;
+}
+
 :root {
   --radius: 0.625rem;
   --background: hsl(0 0% 99%);
@@ -226,33 +259,57 @@
   --tw-prose-invert-td-borders: var(--border);
 }
 
-/* Editor font switching */
-[data-editor-font="system"] .ProseMirror {
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
-}
+/* Editor font switching - using CSS layers for proper specificity */
+@layer utilities {
+	/* Define font-family CSS variables based on editor font setting */
+	[data-editor-font="system"] {
+		--editor-font-family: var(--font-geist-sans), system-ui, sans-serif;
+	}
 
-[data-editor-font="serif"] .ProseMirror {
-  font-family: var(--font-lora), Georgia, serif;
-}
+	[data-editor-font="serif"] {
+		--editor-font-family: var(--font-lora), Georgia, serif;
+	}
 
-[data-editor-font="merriweather"] .ProseMirror {
-  font-family: var(--font-merriweather), Georgia, serif;
-}
+	[data-editor-font="merriweather"] {
+		--editor-font-family: var(--font-merriweather), Georgia, serif;
+	}
 
-[data-editor-font="inter"] .ProseMirror {
-  font-family: var(--font-inter), system-ui, sans-serif;
-}
+	[data-editor-font="inter"] {
+		--editor-font-family: var(--font-inter), system-ui, sans-serif;
+	}
 
-[data-editor-font="mono"] .ProseMirror {
-  font-family: var(--font-jetbrains), monospace;
-}
+	[data-editor-font="mono"] {
+		--editor-font-family: var(--font-jetbrains), monospace;
+	}
 
-[data-editor-font="ubuntu"] .ProseMirror {
-  font-family: var(--font-ubuntu), monospace;
-}
+	[data-editor-font="ubuntu"] {
+		--editor-font-family: var(--font-ubuntu), monospace;
+	}
 
-[data-editor-font="mono2"] .ProseMirror {
-  font-family: var(--font-ubuntu-mono), monospace;
+	[data-editor-font="mono2"] {
+		--editor-font-family: var(--font-ubuntu-mono), monospace;
+	}
+
+	[data-editor-font="agave"] {
+		--editor-font-family: "AgaveNerdFontMono", "AgaveNerdFont", monospace;
+	}
+
+	/* Apply font-family to the entire application */
+	[data-editor-font] {
+		font-family: var(--editor-font-family);
+	}
+
+	/* Override font-sans utility class on body when custom font is selected */
+	[data-editor-font] body,
+	[data-editor-font] .font-sans {
+		font-family: var(--editor-font-family);
+	}
+
+	/* Apply font-family to editor content using the CSS variable */
+	[data-editor-font] .ProseMirror,
+	[data-editor-font] .prose {
+		font-family: var(--editor-font-family);
+	}
 }
 
 .ProseMirror h1 {

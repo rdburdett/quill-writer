@@ -63,6 +63,9 @@ importers:
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.1.17
+      '@tiptap/core':
+        specifier: ^2.27.1
+        version: 2.27.1(@tiptap/pm@2.27.1)
       '@types/node':
         specifier: ^20
         version: 20.19.25
