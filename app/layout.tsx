@@ -9,6 +9,7 @@ import {
 	Ubuntu,
 	Ubuntu_Mono,
 } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AppThemeProvider } from "@/components/theme-provider";
@@ -57,6 +58,23 @@ const ubuntuMono = Ubuntu_Mono({
 	weight: ["400", "700"],
 });
 
+const agaveNerdFontMono = localFont({
+	src: [
+		{
+			path: "../public/fonts/agave/AgaveNerdFontMono-Regular.ttf",
+			weight: "400",
+			style: "normal",
+		},
+		{
+			path: "../public/fonts/agave/AgaveNerdFontMono-Bold.ttf",
+			weight: "700",
+			style: "normal",
+		},
+	],
+	variable: "--font-agave-nerd",
+	display: "swap",
+});
+
 export const metadata: Metadata = {
 	title: "Quill",
 	description:
@@ -80,7 +98,8 @@ export default function RootLayout({
 					inter.variable,
 					jetbrainsMono.variable,
 					ubuntu.variable,
-					ubuntuMono.variable
+					ubuntuMono.variable,
+					agaveNerdFontMono.variable
 				)}
 			>
 				<AppThemeProvider>{children}</AppThemeProvider>
