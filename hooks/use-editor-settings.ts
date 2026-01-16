@@ -8,6 +8,7 @@ const useIsomorphicLayoutEffect =
 
 export const fonts = [
 	{ value: "system", label: "System Default" },
+	{ value: "avenir", label: "Avenir Next" },
 	{ value: "serif", label: "Lora (Serif)" },
 	{ value: "merriweather", label: "Merriweather" },
 	{ value: "inter", label: "Inter" },
@@ -25,6 +26,7 @@ export type FontValue = (typeof fonts)[number]["value"];
 // Using actual font names since Next.js font CSS variables may not resolve correctly
 export const fontFamilyMap: Record<FontValue, string> = {
 	system: "'Geist', system-ui, sans-serif",
+	avenir: "'Avenir Next', 'Avenir', system-ui, sans-serif",
 	serif: "'Lora', Georgia, serif",
 	merriweather: "'Merriweather', Georgia, serif",
 	inter: "'Inter', system-ui, sans-serif",
