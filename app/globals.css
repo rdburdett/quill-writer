@@ -229,8 +229,12 @@
 }
 
 /* Editor font switching */
-/* Font variables are defined on body by Next.js, so we apply styles there */
-/* The data-editor-font attribute is set on html, but font-family is applied via JS */
+/* Editor font is applied to writing areas via --editor-font-family CSS variable */
+/* UI font is applied to body via inline style in JavaScript */
+.ProseMirror,
+.prose {
+	font-family: var(--editor-font-family, inherit);
+}
 
 .ProseMirror h1 {
 	@apply text-3xl font-bold mt-6 mb-4;

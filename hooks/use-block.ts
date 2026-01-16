@@ -4,6 +4,7 @@
  * Block Hook
  * 
  * Manages the currently selected/editing block state.
+ * Includes localStorage persistence for tabs across sessions.
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
@@ -22,6 +23,8 @@ export interface BlockState {
 	openBlocks: Map<string, Block>;
 	/** The currently active block file path */
 	activeBlockPath: string | null;
+	/** Ordered list of tab paths */
+	tabOrder: string[];
 	/** Map of loading states keyed by file path */
 	loadingBlocks: Set<string>;
 	/** Map of saving states keyed by file path */
@@ -32,6 +35,58 @@ export interface BlockState {
 	blockErrors: Map<string, Error>;
 	/** Map of externally modified flags keyed by file path */
 	externallyModifiedBlocks: Set<string>;
+	/** Whether tabs are currently being restored */
+	isRestoringTabs: boolean;
+}
+
+// =============================================================================
+// localStorage Tab Persistence
+// =============================================================================
+
+interface PersistedTabState {
+	openPaths: string[];
+	activePath: string | null;
+	tabOrder: string[];
+}
+
+const TAB_STORAGE_PREFIX = "quill.tabs.";
+
+function getTabStorageKey(projectName: string): string {
+	// Normalize project name for use as storage key
+	return TAB_STORAGE_PREFIX + projectName.toLowerCase().replace(/[^a-z0-9]/g, "-");
+}
+
+function saveTabsToStorage(projectName: string, state: PersistedTabState): void {
+	if (typeof window === "undefined") return;
+	try {
+		const key = getTabStorageKey(projectName);
+		window.localStorage.setItem(key, JSON.stringify(state));
+	} catch (error) {
+		console.warn("[useBlock] Failed to save tabs to localStorage:", error);
+	}
+}
+
+function loadTabsFromStorage(projectName: string): PersistedTabState | null {
+	if (typeof window === "undefined") return null;
+	try {
+		const key = getTabStorageKey(projectName);
+		const stored = window.localStorage.getItem(key);
+		if (!stored) return null;
+		return JSON.parse(stored) as PersistedTabState;
+	} catch (error) {
+		console.warn("[useBlock] Failed to load tabs from localStorage:", error);
+		return null;
+	}
+}
+
+function clearTabsFromStorage(projectName: string): void {
+	if (typeof window === "undefined") return;
+	try {
+		const key = getTabStorageKey(projectName);
+		window.localStorage.removeItem(key);
+	} catch (error) {
+		console.warn("[useBlock] Failed to clear tabs from localStorage:", error);
+	}
 }
 
 export interface BlockActions {
@@ -55,6 +110,10 @@ export interface BlockActions {
 	dismissExternalModification: (filePath: string) => void;
 	/** Get the active block (convenience method) */
 	getActiveBlock: () => Block | null;
+	/** Reorder tabs */
+	reorderTabs: (newOrder: string[]) => void;
+	/** Restore tabs from localStorage (called when project opens) */
+	restoreTabs: () => Promise<void>;
 }
 
 export interface UseBlockOptions {
@@ -74,12 +133,17 @@ export function useBlock(options: UseBlockOptions): BlockState & BlockActions {
 	const [state, setState] = useState<BlockState>({
 		openBlocks: new Map(),
 		activeBlockPath: null,
+		tabOrder: [],
 		loadingBlocks: new Set(),
 		savingBlocks: new Set(),
 		unsavedBlocks: new Set(),
 		blockErrors: new Map(),
 		externallyModifiedBlocks: new Set(),
+		isRestoringTabs: false,
 	});
+
+	// Track the last project name to detect project changes
+	const lastProjectNameRef = useRef<string | null>(null);
 
 	// Map of auto-savers keyed by file path
 	const autoSaversRef = useRef<Map<string, AutoSaver>>(new Map());
@@ -231,10 +295,15 @@ export function useBlock(options: UseBlockOptions): BlockState & BlockActions {
 					openBlocks.set(filePath, block);
 					const loading = new Set(prev.loadingBlocks);
 					loading.delete(filePath);
+					// Add to tab order if not already present
+					const tabOrder = prev.tabOrder.includes(filePath)
+						? prev.tabOrder
+						: [...prev.tabOrder, filePath];
 					return {
 						...prev,
 						openBlocks,
 						activeBlockPath: filePath,
+						tabOrder,
 						loadingBlocks: loading,
 					};
 				});
@@ -267,19 +336,29 @@ export function useBlock(options: UseBlockOptions): BlockState & BlockActions {
 				errors.delete(filePath);
 				const modified = new Set(prev.externallyModifiedBlocks);
 				modified.delete(filePath);
+				// Remove from tab order
+				const tabOrder = prev.tabOrder.filter((path) => path !== filePath);
 
-				// If closing the active block, switch to another open block or null
+				// If closing the active block, switch to adjacent tab or null
 				let activeBlockPath = prev.activeBlockPath;
 				if (activeBlockPath === filePath) {
-					// Find another open block
-					const remainingPaths = Array.from(openBlocks.keys());
-					activeBlockPath = remainingPaths.length > 0 ? remainingPaths[remainingPaths.length - 1] : null;
+					// Find the adjacent tab (prefer the one to the right, then left)
+					const closedIndex = prev.tabOrder.indexOf(filePath);
+					if (tabOrder.length > 0) {
+						// If there was a tab to the right, it's now at the same index
+						// If not, use the one to the left (index - 1)
+						const newIndex = Math.min(closedIndex, tabOrder.length - 1);
+						activeBlockPath = tabOrder[newIndex];
+					} else {
+						activeBlockPath = null;
+					}
 				}
 
 				return {
 					...prev,
 					openBlocks,
 					activeBlockPath,
+					tabOrder,
 					loadingBlocks: loading,
 					savingBlocks: saving,
 					unsavedBlocks: unsaved,
@@ -296,11 +375,13 @@ export function useBlock(options: UseBlockOptions): BlockState & BlockActions {
 		setState({
 			openBlocks: new Map(),
 			activeBlockPath: null,
+			tabOrder: [],
 			loadingBlocks: new Set(),
 			savingBlocks: new Set(),
 			unsavedBlocks: new Set(),
 			blockErrors: new Map(),
 			externallyModifiedBlocks: new Set(),
+			isRestoringTabs: false,
 		});
 	}, [cleanupAll]);
 
@@ -430,6 +511,189 @@ export function useBlock(options: UseBlockOptions): BlockState & BlockActions {
 		});
 	}, []);
 
+	const reorderTabs = useCallback((newOrder: string[]) => {
+		setState((prev) => ({ ...prev, tabOrder: newOrder }));
+	}, []);
+
+	// Internal function to open a block without triggering persistence
+	const openBlockInternal = useCallback(
+		async (filePath: string, setAsActive: boolean = true) => {
+			if (!directoryHandle || !project) return false;
+
+			try {
+				// Read the file content
+				const content = await readTextFile(directoryHandle, filePath);
+				const filename = filePath.split("/").pop() ?? filePath;
+				const metadata = project.blocks[filePath];
+
+				const block: Block = {
+					id: metadata?.id ?? crypto.randomUUID(),
+					filePath,
+					title: extractTitle(content, filename),
+					wordCount: countWords(content),
+					tags: metadata?.tags ?? [],
+					characterIds: metadata?.characterIds ?? [],
+					color: metadata?.color,
+					lastModified: Date.now(),
+					content,
+					arrangement: metadata?.arrangement,
+				};
+
+				lastSavedContentRef.current.set(filePath, content);
+
+				// Create auto-saver
+				const autoSaver = createAutoSaver(directoryHandle, filePath, {
+					delay: autoSaveDelay,
+					onBeforeSave: () => {
+						setState((prev) => {
+							const saving = new Set(prev.savingBlocks);
+							saving.add(filePath);
+							return { ...prev, savingBlocks: saving };
+						});
+					},
+					onSaved: () => {
+						lastSaveTimeRef.current.set(filePath, Date.now());
+						setState((prev) => {
+							const saving = new Set(prev.savingBlocks);
+							saving.delete(filePath);
+							const unsaved = new Set(prev.unsavedBlocks);
+							unsaved.delete(filePath);
+							return { ...prev, savingBlocks: saving, unsavedBlocks: unsaved };
+						});
+						if (onBlockSaved) {
+							onBlockSaved(filePath);
+						}
+					},
+					onError: (error) => {
+						setState((prev) => {
+							const saving = new Set(prev.savingBlocks);
+							saving.delete(filePath);
+							const errors = new Map(prev.blockErrors);
+							errors.set(filePath, error);
+							return { ...prev, savingBlocks: saving, blockErrors: errors };
+						});
+					},
+				});
+				autoSaversRef.current.set(filePath, autoSaver);
+
+				// Create file watcher for external changes
+				const watcher = createSingleFileWatcher(directoryHandle, filePath, {
+					interval: 2000,
+					onModified: () => {
+						const lastSaveTime = lastSaveTimeRef.current.get(filePath) ?? 0;
+						const timeSinceLastSave = Date.now() - lastSaveTime;
+						if (timeSinceLastSave > SAVE_GRACE_PERIOD) {
+							setState((prev) => {
+								const modified = new Set(prev.externallyModifiedBlocks);
+								modified.add(filePath);
+								return { ...prev, externallyModifiedBlocks: modified };
+							});
+						}
+					},
+					onDeleted: () => {
+						setState((prev) => {
+							const errors = new Map(prev.blockErrors);
+							errors.set(filePath, new Error("File was deleted externally"));
+							return { ...prev, blockErrors: errors };
+						});
+					},
+				});
+				watcher.start();
+				watchersRef.current.set(filePath, watcher);
+
+				return block;
+			} catch {
+				return null;
+			}
+		},
+		[directoryHandle, project, autoSaveDelay, onBlockSaved]
+	);
+
+	const restoreTabs = useCallback(async () => {
+		if (!directoryHandle || !project) return;
+
+		const persisted = loadTabsFromStorage(project.name);
+		if (!persisted || persisted.openPaths.length === 0) {
+			console.log("[useBlock] No persisted tabs found for project:", project.name);
+			return;
+		}
+
+		console.log("[useBlock] Restoring tabs for project:", project.name, persisted);
+		setState((prev) => ({ ...prev, isRestoringTabs: true }));
+
+		const openBlocks = new Map<string, Block>();
+		const validTabOrder: string[] = [];
+
+		// Open each tab in order, skipping files that no longer exist
+		for (const filePath of persisted.tabOrder) {
+			// Only try to open files that were in openPaths
+			if (!persisted.openPaths.includes(filePath)) continue;
+
+			const block = await openBlockInternal(filePath, false);
+			if (block) {
+				openBlocks.set(filePath, block);
+				validTabOrder.push(filePath);
+			} else {
+				console.log("[useBlock] Skipping missing/failed file:", filePath);
+			}
+		}
+
+		// Determine active tab - use persisted if valid, otherwise first tab
+		let activePath: string | null = null;
+		if (persisted.activePath && openBlocks.has(persisted.activePath)) {
+			activePath = persisted.activePath;
+		} else if (validTabOrder.length > 0) {
+			activePath = validTabOrder[0];
+		}
+
+		setState((prev) => ({
+			...prev,
+			openBlocks,
+			activeBlockPath: activePath,
+			tabOrder: validTabOrder,
+			isRestoringTabs: false,
+		}));
+
+		console.log("[useBlock] Tabs restored:", validTabOrder.length, "tabs, active:", activePath);
+	}, [directoryHandle, project, openBlockInternal]);
+
+	// ==========================================================================
+	// Persist tabs to localStorage when they change
+	// ==========================================================================
+
+	useEffect(() => {
+		if (!project || state.isRestoringTabs) return;
+
+		// Debounce saves to avoid excessive writes
+		const timeoutId = setTimeout(() => {
+			const persistedState: PersistedTabState = {
+				openPaths: Array.from(state.openBlocks.keys()),
+				activePath: state.activeBlockPath,
+				tabOrder: state.tabOrder,
+			};
+			saveTabsToStorage(project.name, persistedState);
+		}, 500);
+
+		return () => clearTimeout(timeoutId);
+	}, [project, state.openBlocks, state.activeBlockPath, state.tabOrder, state.isRestoringTabs]);
+
+	// ==========================================================================
+	// Auto-restore tabs when project changes
+	// ==========================================================================
+
+	useEffect(() => {
+		if (!project || !directoryHandle) return;
+
+		// Check if this is a new project (different from last one)
+		const isNewProject = lastProjectNameRef.current !== project.name;
+		lastProjectNameRef.current = project.name;
+
+		// Only restore tabs for a new project if we don't already have tabs open
+		if (isNewProject && state.openBlocks.size === 0 && !state.isRestoringTabs) {
+			restoreTabs();
+		}
+	}, [project, directoryHandle]); // eslint-disable-line react-hooks/exhaustive-deps
+
 	// ==========================================================================
 	// Cleanup on unmount or directory change
 	// ==========================================================================
@@ -450,6 +714,8 @@ export function useBlock(options: UseBlockOptions): BlockState & BlockActions {
 		reloadBlock,
 		dismissExternalModification,
 		getActiveBlock,
+		reorderTabs,
+		restoreTabs,
 	};
 }
 

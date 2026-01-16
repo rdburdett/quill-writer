@@ -400,42 +400,52 @@ Happy writing! ✍️
 				return false;
 			}
 
-			// Check/request permission
+			// Check permission - if already granted, we can restore automatically
 			const permState = await checkPermission(handle);
-			if (permState !== "granted") {
-				const granted = await requestPermission(handle);
-				if (!granted) {
-					await clearStoredHandle();
-					setState((prev) => ({ ...prev, isLoading: false }));
-					return false;
-				}
+			if (permState === "granted") {
+				// Permission is already granted, load the project
+				const project = await loadProject(handle);
+				const { project: syncedProject } = await syncBlocksWithFilesystem(handle, project);
+				const tree = await scanDirectory(handle);
+
+				setState({
+					isOpen: true,
+					isLoading: false,
+					directoryHandle: handle,
+					project: syncedProject,
+					folderTree: tree,
+					error: null,
+					hasUnsavedChanges: false,
+					isWatching: false,
+				});
+
+				return true;
 			}
 
-			// Load project
-			const project = await loadProject(handle);
-			const { project: syncedProject } = await syncBlocksWithFilesystem(handle, project);
-
-			// Scan folder tree
-			const tree = await scanDirectory(handle);
-
-			setState({
-				isOpen: true,
-				isLoading: false,
-				directoryHandle: handle,
-				project: syncedProject,
-				folderTree: tree,
-				error: null,
-				hasUnsavedChanges: false,
-				isWatching: false,
-			});
-
-			return true;
+			// Permission is "prompt" or "denied" - can't auto-restore without user gesture
+			// Don't clear the handle - user can open from recent projects
+			// The recent projects list will show this project and request permission on click
+			console.log("[Quill] Cannot auto-restore project - permission needs user gesture");
+			setState((prev) => ({ ...prev, isLoading: false }));
+			return false;
 		} catch (error) {
-			await clearStoredHandle();
+			// Only clear the handle if it's truly invalid (corrupted, folder deleted, etc.)
+			// Check if it's a permission error vs a handle error
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			const isHandleError = errorMessage.includes("not found") || 
+				errorMessage.includes("invalid") ||
+				errorMessage.includes("NotFoundError");
+			
+			if (isHandleError) {
+				console.log("[Quill] Clearing invalid stored handle:", errorMessage);
+				await clearStoredHandle().catch(() => {});
+			}
+			
 			setState((prev) => ({
 				...prev,
 				isLoading: false,
-				error: error instanceof Error ? error : new Error(String(error)),
+				// Don't show error for permission-related issues - just show welcome screen
+				error: null,
 			}));
 			return false;
 		}

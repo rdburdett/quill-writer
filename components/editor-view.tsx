@@ -43,9 +43,6 @@ export function EditorView() {
 	const [newFolderName, setNewFolderName] = useState("");
 	const [isCreatingFolder, setIsCreatingFolder] = useState(false);
 
-	// Tab order state (maintains order of tabs)
-	const [tabOrder, setTabOrder] = useState<string[]>([]);
-
 	// Sidebar collapse state
 	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
 		if (typeof window === "undefined") {
@@ -67,10 +64,10 @@ export function EditorView() {
 		setIsSidebarCollapsed((prev) => !prev);
 	}, []);
 
-	// Convert openBlocks Map to tabs array
+	// Convert openBlocks Map to tabs array using centralized tabOrder
 	const tabs = useMemo(() => {
 		const tabsArray: Tab[] = [];
-		const order = tabOrder.length > 0 ? tabOrder : Array.from(block.openBlocks.keys());
+		const order = block.tabOrder.length > 0 ? block.tabOrder : Array.from(block.openBlocks.keys());
 		
 		// Add tabs in order
 		for (const filePath of order) {
@@ -94,18 +91,7 @@ export function EditorView() {
 		}
 		
 		return tabsArray;
-	}, [block.openBlocks, tabOrder]);
-
-	// Update tab order when blocks change
-	useMemo(() => {
-		const currentPaths = Array.from(block.openBlocks.keys());
-		setTabOrder((prev) => {
-			// Keep existing order, add new tabs at the end
-			const newOrder = prev.filter((path) => currentPaths.includes(path));
-			const newPaths = currentPaths.filter((path) => !prev.includes(path));
-			return [...newOrder, ...newPaths];
-		});
-	}, [block.openBlocks]);
+	}, [block.openBlocks, block.tabOrder]);
 
 	// Handle file selection from sidebar
 	const handleFileSelect = useCallback(
@@ -141,16 +127,14 @@ export function EditorView() {
 	const handleTabClose = useCallback(
 		(filePath: string) => {
 			block.closeBlock(filePath);
-			// Update tab order
-			setTabOrder((prev) => prev.filter((path) => path !== filePath));
 		},
 		[block]
 	);
 
 	// Handle tab reorder
 	const handleTabsReorder = useCallback((newOrder: string[]) => {
-		setTabOrder(newOrder);
-	}, []);
+		block.reorderTabs(newOrder);
+	}, [block]);
 
 	// Handle text drop on tab or file
 	const handleDropText = useCallback(

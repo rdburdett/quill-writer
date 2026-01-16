@@ -11,11 +11,14 @@ import { useSubtheme } from "@/hooks/use-subtheme";
 import {
 	useEditorSettings,
 	fonts,
+	uiFonts,
 	tabSizes,
 	type FontValue,
+	type UIFontValue,
 	type TabSize,
 } from "@/hooks/use-editor-settings";
 import { useUISettings } from "@/hooks/use-ui-settings";
+import { ProjectProvider } from "@/components/project-provider";
 
 type Mode = "light" | "dark";
 
@@ -28,11 +31,16 @@ type SubthemeContextValue = {
 
 type EditorSettingsContextValue = {
 	font: FontValue;
+	uiFont: UIFontValue;
+	matchEditorFont: boolean;
 	tabSize: TabSize;
 	fonts: typeof fonts;
+	uiFonts: typeof uiFonts;
 	tabSizes: typeof tabSizes;
 	showBorders: boolean;
 	updateFont: (value: FontValue) => void;
+	updateUIFont: (value: UIFontValue) => void;
+	updateMatchEditorFont: (value: boolean) => void;
 	updateTabSize: (value: TabSize) => void;
 	updateShowBorders: (value: boolean) => void;
 };
@@ -68,8 +76,12 @@ function SubthemeSync({ children }: { children: React.ReactNode }) {
 	const { subtheme, available, updateSubtheme } = useSubtheme(mode);
 	const {
 		font,
+		uiFont,
+		matchEditorFont,
 		tabSize,
 		updateFont,
+		updateUIFont,
+		updateMatchEditorFont,
 		updateTabSize,
 	} = useEditorSettings();
 	const { showBorders, updateShowBorders } = useUISettings();
@@ -81,16 +93,21 @@ function SubthemeSync({ children }: { children: React.ReactNode }) {
 			<EditorSettingsContext.Provider
 				value={{
 					font,
+					uiFont,
+					matchEditorFont,
 					tabSize,
 					fonts,
+					uiFonts,
 					tabSizes,
 					showBorders,
 					updateFont,
+					updateUIFont,
+					updateMatchEditorFont,
 					updateTabSize,
 					updateShowBorders,
 				}}
 			>
-				{children}
+				<ProjectProvider>{children}</ProjectProvider>
 			</EditorSettingsContext.Provider>
 		</SubthemeContext.Provider>
 	);

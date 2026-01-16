@@ -124,15 +124,23 @@ export async function clearRecentProjects(): Promise<void> {
 }
 
 /**
- * Check if we still have permission to access a project handle
+ * Check if a project handle is still valid (exists and can potentially be accessed)
+ * Note: This does NOT check if permission is granted - just if the handle is usable.
+ * Permission will be requested when the user actually tries to open the project.
  */
 export async function validateProjectHandle(
 	handle: FileSystemDirectoryHandle
 ): Promise<boolean> {
 	try {
+		// Check if the handle is valid by querying permission
+		// Returns "granted", "prompt", or "denied"
+		// "prompt" means the handle is valid but needs permission re-grant
+		// Only return false if the handle itself is broken/invalid
 		const permission = await handle.queryPermission({ mode: "read" });
-		return permission === "granted";
+		// Handle is valid as long as it's not explicitly denied and the query succeeded
+		return permission !== "denied";
 	} catch {
+		// Handle is invalid (e.g., folder was deleted, handle corrupted)
 		return false;
 	}
 }
