@@ -13,6 +13,7 @@ import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { AppThemeProvider } from "@/components/theme-provider";
+import { FilmGrain } from "@/components/film-grain";
 import { cn } from "@/lib/utils";
 
 const geistSans = Geist({
@@ -103,6 +104,7 @@ export default function RootLayout({
 				)}
 			>
 				<AppThemeProvider>{children}</AppThemeProvider>
+				<FilmGrain />
 				<Analytics />
 			</body>
 		</html>
