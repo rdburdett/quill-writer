@@ -394,6 +394,28 @@ export function NovelEditor({
 		};
 	}, []);
 
+	// Fix for drag handle not hiding on trackpad scroll
+	// The tiptap-extension-global-drag-handle only listens for deprecated 'mousewheel' events,
+	// not the standard 'wheel' event that modern trackpads fire
+	useEffect(() => {
+		const element = editorRef.current;
+		if (!element) return;
+
+		const handleWheel = () => {
+			// Hide the drag handle by adding the 'hide' class
+			const dragHandle = document.querySelector('.drag-handle');
+			if (dragHandle) {
+				dragHandle.classList.add('hide');
+			}
+		};
+
+		element.addEventListener('wheel', handleWheel, { passive: true });
+
+		return () => {
+			element.removeEventListener('wheel', handleWheel);
+		};
+	}, []);
+
 	return (
 		<div className="flex flex-1 flex-col" key={editorKey}>
 			<EditorRoot>
