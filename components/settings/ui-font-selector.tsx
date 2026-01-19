@@ -24,27 +24,36 @@ export function UIFontSelector() {
 				/>
 				<span>Match writing font</span>
 			</label>
-			{!matchEditorFont && (
-				<Select
-					value={uiFont}
-					onValueChange={(v) => updateUIFont(v as UIFontValue)}
+			<div className="h-[40px] overflow-hidden transition-opacity duration-200">
+				<div
+					className={`transition-all duration-200 ${
+						matchEditorFont
+							? "invisible opacity-0 pointer-events-none -translate-y-2"
+							: "visible opacity-100 translate-y-0"
+					}`}
 				>
-					<SelectTrigger className="w-[180px]">
-						<SelectValue placeholder="Select font" />
-					</SelectTrigger>
-					<SelectContent>
-						{uiFonts.map((f) => (
-							<SelectItem
-								key={f.value}
-								value={f.value}
-								style={{ fontFamily: fontFamilyMap[f.value] }}
-							>
-								{f.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			)}
+					<Select
+						value={uiFont}
+						onValueChange={(v) => updateUIFont(v as UIFontValue)}
+						disabled={matchEditorFont}
+					>
+						<SelectTrigger className="w-[180px]">
+							<SelectValue placeholder="Select font" />
+						</SelectTrigger>
+						<SelectContent>
+							{uiFonts.map((f) => (
+								<SelectItem
+									key={f.value}
+									value={f.value}
+									style={{ fontFamily: fontFamilyMap[f.value] }}
+								>
+									{f.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
+			</div>
 		</div>
 	);
 }
