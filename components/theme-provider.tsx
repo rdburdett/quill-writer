@@ -38,11 +38,13 @@ type EditorSettingsContextValue = {
 	uiFonts: typeof uiFonts;
 	tabSizes: typeof tabSizes;
 	showBorders: boolean;
+	showEdgeFade: boolean;
 	updateFont: (value: FontValue) => void;
 	updateUIFont: (value: UIFontValue) => void;
 	updateMatchEditorFont: (value: boolean) => void;
 	updateTabSize: (value: TabSize) => void;
 	updateShowBorders: (value: boolean) => void;
+	updateShowEdgeFade: (value: boolean) => void;
 };
 
 const SubthemeContext = React.createContext<SubthemeContextValue | undefined>(
@@ -84,7 +86,7 @@ function SubthemeSync({ children }: { children: React.ReactNode }) {
 		updateMatchEditorFont,
 		updateTabSize,
 	} = useEditorSettings();
-	const { showBorders, updateShowBorders } = useUISettings();
+	const { showBorders, updateShowBorders, showEdgeFade, updateShowEdgeFade } = useUISettings();
 
 	return (
 		<SubthemeContext.Provider
@@ -100,11 +102,13 @@ function SubthemeSync({ children }: { children: React.ReactNode }) {
 					uiFonts,
 					tabSizes,
 					showBorders,
+					showEdgeFade,
 					updateFont,
 					updateUIFont,
 					updateMatchEditorFont,
 					updateTabSize,
 					updateShowBorders,
+					updateShowEdgeFade,
 				}}
 			>
 				<ProjectProvider>{children}</ProjectProvider>

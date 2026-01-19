@@ -7,6 +7,7 @@ import { FontSelector } from "@/components/settings/font-selector";
 import { UIFontSelector } from "@/components/settings/ui-font-selector";
 import { TabSizeSelector } from "@/components/settings/tab-size-selector";
 import { BorderToggle } from "@/components/settings/border-toggle";
+import { EdgeFadeToggle } from "@/components/settings/edge-fade-toggle";
 
 export default function SettingsPage() {
 	return (
@@ -71,6 +72,16 @@ export default function SettingsPage() {
 							</p>
 						</div>
 						<BorderToggle />
+					</div>
+
+					<div className="flex flex-col items-start justify-between gap-4 border-t pt-6 sm:flex-row sm:items-center">
+						<div>
+							<h3 className="text-sm font-medium">Edge Fade</h3>
+							<p className="mt-1 text-sm text-muted-foreground">
+								Fade text at the top and bottom of the editor.
+							</p>
+						</div>
+						<EdgeFadeToggle />
 					</div>
 				</section>
 
