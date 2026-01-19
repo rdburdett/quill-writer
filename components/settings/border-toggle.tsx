@@ -1,17 +1,16 @@
 "use client";
 
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { useEditorSettingsContext } from "@/components/theme-provider";
 
 export function BorderToggle() {
 	const { showBorders, updateShowBorders } = useEditorSettingsContext();
 
 	return (
-		<Checkbox
-			id="show-borders"
+		<Switch
 			checked={showBorders}
-			onCheckedChange={(checked) => updateShowBorders(checked === true)}
-			aria-label="Show borders"
+			onCheckedChange={updateShowBorders}
+			aria-label={showBorders ? "Hide borders" : "Show borders"}
 		/>
 	);
 }

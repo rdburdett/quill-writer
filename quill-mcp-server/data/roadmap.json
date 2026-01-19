@@ -190,13 +190,19 @@
 					"description": "Supabase or Clerk auth, cloud document storage",
 					"status": "future"
 				},
-				{
-					"id": "m5-5",
-					"title": "AI-Assisted Story Node Generation",
-					"description": "LLM-powered suggestions for plot development, character arcs",
-					"status": "future"
-				}
-			]
-		}
-	]
+			{
+				"id": "m5-5",
+				"title": "AI-Assisted Story Node Generation",
+				"description": "LLM-powered suggestions for plot development, character arcs",
+				"status": "future"
+			},
+			{
+				"id": "m5-6",
+				"title": "Settings Database Storage",
+				"description": "Move theme and other settings to database storage instead of just localStorage so they persist across devices",
+				"status": "future"
+			}
+		]
+	}
+]
 }

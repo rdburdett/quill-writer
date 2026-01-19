@@ -1,19 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useLayoutEffect } from "react";
+
+// Use useLayoutEffect on client, useEffect on server
+const useIsomorphicLayoutEffect =
+	typeof window !== "undefined" ? useLayoutEffect : useEffect;
 
 const STORAGE_KEY_SHOW_BORDERS = "ui.showBorders";
 
 const DEFAULT_SHOW_BORDERS = false;
 
 export function useUISettings() {
-	const [showBorders, setShowBorders] = useState<boolean>(() => {
-		if (typeof window === "undefined") {
-			return DEFAULT_SHOW_BORDERS;
-		}
+	const [showBorders, setShowBorders] = useState<boolean>(DEFAULT_SHOW_BORDERS);
+
+	// Sync from localStorage on mount (client-side only)
+	useIsomorphicLayoutEffect(() => {
+		if (typeof window === "undefined") return;
+
 		const stored = window.localStorage.getItem(STORAGE_KEY_SHOW_BORDERS);
-		return stored === "true" ? true : DEFAULT_SHOW_BORDERS;
-	});
+		if (stored === "true") {
+			setShowBorders(true);
+		}
+	}, []);
 
 	const updateShowBorders = (value: boolean) => {
 		setShowBorders(value);
