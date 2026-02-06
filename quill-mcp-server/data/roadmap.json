@@ -88,16 +88,22 @@
 					"description": "Notion/Cursor-like search window for ideas, scenes, characters, places, plot threads",
 					"status": "planned"
 				},
-				{
-					"id": "m2-6",
-					"title": "Chapters & Scenes Structure",
-					"description": "Named containers with ordered blocks, collapsible, metadata-rich",
-					"status": "planned"
-				}
-			]
-		},
-		{
-			"id": "phase-3",
+			{
+				"id": "m2-6",
+				"title": "Chapters & Scenes Structure",
+				"description": "Named containers with ordered blocks, collapsible, metadata-rich",
+				"status": "planned"
+			},
+			{
+				"id": "m2-7",
+				"title": "Spellcheck",
+				"description": "Integrated spellcheck for the editor with inline squiggly underlines, right-click suggestions, custom dictionary support for character/place names, and language selection",
+				"status": "planned"
+			}
+		]
+	},
+	{
+		"id": "phase-3",
 			"name": "Intelligence Layer",
 			"status": "planned",
 			"description": "Add AI-powered metadata extraction, embeddings, and smart search",
