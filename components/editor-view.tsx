@@ -21,6 +21,7 @@ import { createBlock, moveBlock } from "@/lib/project/loader";
 import { createDirectory, readTextFile, writeTextFile } from "@/lib/filesystem";
 import { titleToFilename } from "@/lib/filesystem/scanner";
 import { cn } from "@/lib/utils";
+import { ViewToggle } from "@/components/view-toggle";
 
 // =============================================================================
 // Editor View Component
@@ -438,6 +439,9 @@ export function EditorView() {
 							<PanelLeftClose className="h-4 w-4" />
 						)}
 					</Button>
+					
+					{/* View Toggle */}
+					<ViewToggle />
 					
 					{/* Project Name & Status */}
 					<div className="flex items-center gap-2">
