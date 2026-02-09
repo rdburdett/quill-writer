@@ -1,21 +1,8 @@
 "use client";
 
 import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
-import Link from "next/link";
-import { Feather, Settings, FolderOpen, FolderPlus, Save, XCircle, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuLabel,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { useProjectContext } from "@/components/project-provider";
-import { useEditorSettingsContext } from "@/components/theme-provider";
-import { FolderSidebar } from "@/components/folder-sidebar";
-import { ViewToggle } from "@/components/view-toggle";
 import { cn } from "@/lib/utils";
 import type { ArrangementTrack } from "@/lib/project/types";
 import { getUnassignedBlocks, getBlocksForTrack, normalizeTrackSlots } from "./types";
@@ -42,33 +29,31 @@ const DEFAULT_WIDTHS: Record<string, number> = {
 type PanelId = "unassigned" | "tracks" | "inspector";
 
 // =============================================================================
-// Arrange View Component
+// Arrange Content Component
 // =============================================================================
 
-export function ArrangeView() {
+interface ArrangeContentProps {
+	/** Register a file select handler (called when a file is clicked in sidebar) */
+	onRegisterFileSelect: (handler: (path: string) => void) => void;
+}
+
+export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 	const { project, folderTree } = useProjectContext();
-	const { showBorders } = useEditorSettingsContext();
 	const [selectedBlockPath, setSelectedBlockPath] = useState<string | null>(null);
 
 	// =========================================================================
-	// Sidebar state (shared localStorage key with Write view)
+	// File select handler (selects block for inspector)
 	// =========================================================================
 
-	const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-		if (typeof window === "undefined") return false;
-		const stored = window.localStorage.getItem("sidebar.collapsed");
-		return stored === "true";
-	});
+	const handleFileSelect = useCallback((path: string) => {
+		folderTree.select(path);
+		setSelectedBlockPath(path);
+	}, [folderTree]);
 
+	// Register the handler with the shell
 	useEffect(() => {
-		if (typeof window !== "undefined") {
-			window.localStorage.setItem("sidebar.collapsed", String(isSidebarCollapsed));
-		}
-	}, [isSidebarCollapsed]);
-
-	const handleToggleSidebar = useCallback(() => {
-		setIsSidebarCollapsed((prev) => !prev);
-	}, []);
+		onRegisterFileSelect(handleFileSelect);
+	}, [handleFileSelect, onRegisterFileSelect]);
 
 	// =========================================================================
 	// Panel order (persisted to localStorage)
@@ -124,8 +109,6 @@ export function ArrangeView() {
 		if (!resizeStateRef.current) return;
 		const { panelId, startWidth } = resizeStateRef.current;
 
-		// If resizing the left panel: width increases with positive deltaX
-		// If resizing the right panel (left is flex): width decreases with positive deltaX
 		const isResizingLeft = panelId === leftPanel;
 		const newWidth = isResizingLeft ? startWidth + deltaX : startWidth - deltaX;
 		const clampedWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, newWidth));
@@ -154,11 +137,6 @@ export function ArrangeView() {
 	// =========================================================================
 	// Handlers
 	// =========================================================================
-
-	const handleFileSelect = useCallback((path: string) => {
-		folderTree.select(path);
-		setSelectedBlockPath(path);
-	}, [folderTree]);
 
 	const handleAddTrack = useCallback(() => {
 		if (!project.project) return;
@@ -321,67 +299,9 @@ export function ArrangeView() {
 	// =========================================================================
 
 	return (
-		<div className="flex h-screen flex-col">
-			{/* Header Bar - matches Write view */}
-			<div className={cn("flex items-center justify-between bg-muted/30 px-4 py-2", showBorders && "border-b border-border")}>
-				<div className="flex items-center gap-4">
-					{/* Sidebar Toggle Button */}
-					<Button
-						variant="ghost"
-						size="icon"
-						className="h-8 w-8"
-						onClick={handleToggleSidebar}
-						title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-						aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-					>
-						{isSidebarCollapsed ? (
-							<PanelLeftOpen className="h-4 w-4" />
-						) : (
-							<PanelLeftClose className="h-4 w-4" />
-						)}
-					</Button>
-
-					{/* View Toggle */}
-					<ViewToggle />
-
-					{/* Project Name & Status */}
-					<div className="flex items-center gap-2">
-						<span className="font-medium">{project.project?.name || "Quill"}</span>
-						{project.hasUnsavedChanges && (
-							<span className="h-2 w-2 rounded-full bg-amber-500" title="Unsaved changes" />
-						)}
-					</div>
-				</div>
-
-				{/* App Menu */}
-				<AppMenu
-					hasUnsavedChanges={project.hasUnsavedChanges}
-					onSaveProject={project.saveProject}
-					onOpenProject={project.openProject}
-					onCreateNewProject={project.createNewProject}
-					onCloseProject={project.closeProject}
-				/>
-			</div>
-
-			{/* Content Area */}
+		<div className="flex h-full flex-col overflow-hidden">
+			{/* Arrange Panels with resize handles between them */}
 			<div className="flex flex-1 overflow-hidden">
-				{/* Folder Sidebar - same as Write view */}
-				{!isSidebarCollapsed && (
-					<div className="w-64 shrink-0 h-full">
-						<FolderSidebar
-							tree={folderTree.filteredTree}
-							selectedPath={folderTree.selectedPath}
-							expandedPaths={folderTree.expandedPaths}
-							searchQuery={folderTree.searchQuery}
-							onSelect={handleFileSelect}
-							onToggleFolder={folderTree.toggleExpanded}
-							onSearchChange={folderTree.setSearchQuery}
-							onRefresh={project.refreshTree}
-						/>
-					</div>
-				)}
-
-				{/* Arrange Panels with resize handles between them */}
 				{panelOrder.map((panelId, index) => {
 					const isLast = index === panelOrder.length - 1;
 					const nextPanelId = isLast ? null : panelOrder[index + 1];
@@ -428,77 +348,6 @@ export function ArrangeView() {
 				})}
 			</div>
 		</div>
-	);
-}
-
-// =============================================================================
-// App Menu (matches Write view)
-// =============================================================================
-
-interface AppMenuProps {
-	hasUnsavedChanges: boolean;
-	onSaveProject: () => Promise<void>;
-	onOpenProject: () => void;
-	onCreateNewProject: () => void;
-	onCloseProject: () => void;
-}
-
-function AppMenu({
-	hasUnsavedChanges,
-	onSaveProject,
-	onOpenProject,
-	onCreateNewProject,
-	onCloseProject,
-}: AppMenuProps) {
-	const handleSave = useCallback(async () => {
-		await onSaveProject();
-	}, [onSaveProject]);
-
-	return (
-		<DropdownMenu>
-			<DropdownMenuTrigger asChild>
-				<Button
-					variant="ghost"
-					size="icon"
-					className="h-8 w-8 relative"
-					aria-label="Open app menu"
-				>
-					<Feather className="h-4 w-4" />
-					{hasUnsavedChanges && (
-						<span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-amber-500" />
-					)}
-				</Button>
-			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="w-56">
-				<DropdownMenuLabel>Project</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem onClick={handleSave} disabled={!hasUnsavedChanges}>
-					<Save className="mr-2 h-4 w-4" />
-					Save Project
-				</DropdownMenuItem>
-				<DropdownMenuItem onClick={onOpenProject}>
-					<FolderOpen className="mr-2 h-4 w-4" />
-					Open Project
-				</DropdownMenuItem>
-				<DropdownMenuItem onClick={onCreateNewProject}>
-					<FolderPlus className="mr-2 h-4 w-4" />
-					New Project
-				</DropdownMenuItem>
-				<DropdownMenuItem onClick={onCloseProject} variant="destructive">
-					<XCircle className="mr-2 h-4 w-4" />
-					Close Project
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuLabel>App</DropdownMenuLabel>
-				<DropdownMenuSeparator />
-				<Link href="/settings">
-					<DropdownMenuItem>
-						<Settings className="mr-2 h-4 w-4" />
-						Settings
-					</DropdownMenuItem>
-				</Link>
-			</DropdownMenuContent>
-		</DropdownMenu>
 	);
 }
 
