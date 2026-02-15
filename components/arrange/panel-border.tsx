@@ -101,9 +101,9 @@ export function PanelBorder({
 			className={cn(
 				"shrink-0 relative z-40 transition-colors",
 				resizable ? "w-1 cursor-col-resize" : "w-1",
-				resizable && "hover:bg-border",
-				isResizing && "bg-primary/30",
-				isDragOver && "w-2 bg-primary/10 rounded"
+				resizable && "hover:bg-muted-foreground/15",
+				isResizing && "bg-muted-foreground/25",
+				isDragOver && "w-2 bg-primary/5 rounded"
 			)}
 			style={resizable ? { userSelect: "none" } : undefined}
 		>

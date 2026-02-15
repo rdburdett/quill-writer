@@ -97,7 +97,6 @@ async function scanDirectoryRecursive(
 		return [];
 	}
 
-	const nodes: FolderNode[] = [];
 	const folders: FolderNode[] = [];
 	const files: FolderNode[] = [];
 

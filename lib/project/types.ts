@@ -12,11 +12,13 @@
 
 /**
  * Metadata about a block's position in the arrangement view
+ * Grid: tracks = columns (X), scenes = rows (Y)
  */
 export interface ArrangementPosition {
 	track: number;
 	slot: number;
 	included: boolean; // Is it in the final mix?
+	sceneIndex?: number; // Row in 2D grid (default 0)
 }
 
 /**
@@ -76,7 +78,7 @@ export interface ProjectSettings {
 // =============================================================================
 
 /**
- * A track in the arrangement view (horizontal row)
+ * A track in the arrangement view (column in 2D grid)
  */
 export interface ArrangementTrack {
 	id: string;
@@ -84,6 +86,16 @@ export interface ArrangementTrack {
 	color?: string;
 	order: number;
 	collapsed?: boolean;
+}
+
+/**
+ * A scene in the arrangement view (row in 2D grid, represents time/narrative sequence)
+ */
+export interface ArrangementScene {
+	id: string;
+	name: string;
+	color?: string;
+	order: number;
 }
 
 // =============================================================================
@@ -115,6 +127,7 @@ export interface QuillProject {
 
 	// Arrangement view state
 	arrangementTracks: ArrangementTrack[];
+	arrangementScenes: ArrangementScene[];
 }
 
 /**
@@ -135,6 +148,7 @@ export function createEmptyProject(name: string): QuillProject {
 			autoSaveInterval: 1000,
 		},
 		arrangementTracks: [],
+		arrangementScenes: [{ id: "default", name: "Scene 1", order: 0 }],
 	};
 }
 

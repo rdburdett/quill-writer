@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import { useEditorSettingsContext } from "@/components/theme-provider";
-import { getBlockDisplayTitle } from "./types";
 import { BlockCard } from "./block-card";
 import { DraggablePanelHeader } from "./draggable-panel-header";
 import type { BlockMetadata } from "@/lib/project/types";

@@ -7,7 +7,7 @@
  */
 
 import type { FolderNode } from "@/lib/project/types";
-import { scanDirectory, SUPPORTED_EXTENSIONS } from "./scanner";
+import { scanDirectory } from "./scanner";
 import { getFileMetadata } from "./index";
 
 // =============================================================================

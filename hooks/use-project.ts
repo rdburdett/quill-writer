@@ -100,6 +100,15 @@ export function useProject(): ProjectState & ProjectActions {
 
 	const watcherRef = useRef<FileWatcher | null>(null);
 	const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const projectStateRef = useRef({ directoryHandle: state.directoryHandle, project: state.project });
+
+	// Keep ref in sync so file watcher callback always uses latest project (avoids stale closure overwriting arrangement/etc.)
+	useEffect(() => {
+		projectStateRef.current = {
+			directoryHandle: state.directoryHandle,
+			project: state.project,
+		};
+	}, [state.directoryHandle, state.project]);
 
 	// ==========================================================================
 	// Auto-save on project changes
@@ -137,18 +146,19 @@ export function useProject(): ProjectState & ProjectActions {
 
 	const handleFileChanges = useCallback(
 		async (changes: FileChange[]) => {
-			if (!state.directoryHandle || !state.project) return;
+			const { directoryHandle, project } = projectStateRef.current;
+			if (!directoryHandle || !project) return;
 
 			console.log("File changes detected:", changes);
 
-			// Sync blocks with filesystem
+			// Sync blocks with filesystem (use ref so debounced callback sees latest project, not stale closure)
 			const { project: syncedProject, added, removed } = await syncBlocksWithFilesystem(
-				state.directoryHandle,
-				state.project
+				directoryHandle,
+				project
 			);
 
 			// Refresh the folder tree
-			const tree = await scanDirectory(state.directoryHandle);
+			const tree = await scanDirectory(directoryHandle);
 
 			setState((prev) => ({
 				...prev,
@@ -157,7 +167,7 @@ export function useProject(): ProjectState & ProjectActions {
 				hasUnsavedChanges: added.length > 0 || removed.length > 0,
 			}));
 		},
-		[state.directoryHandle, state.project]
+		[]
 	);
 
 	// ==========================================================================
@@ -322,7 +332,7 @@ export function useProject(): ProjectState & ProjectActions {
 				try {
 					await createDirectory(handle, folder);
 					console.log("[Quill] Created folder:", folder);
-				} catch (e) {
+				} catch {
 					// Folder might already exist, that's fine
 					console.log("[Quill] Folder may already exist:", folder);
 				}

@@ -2,7 +2,7 @@
 
 import { useProjectContext } from "@/components/project-provider";
 import { ProjectWelcome } from "@/components/project-welcome";
-import { EditorView } from "@/components/editor-view";
+import { AppShell } from "@/components/app-shell";
 
 // =============================================================================
 // Page Component
@@ -25,6 +25,6 @@ export default function Home() {
 		);
 	}
 
-	// Show editor view when project is open
-	return <EditorView />;
+	// Show app shell when project is open
+	return <AppShell />;
 }

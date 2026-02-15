@@ -3,7 +3,6 @@
 import { TrackRow } from "./track-row";
 import { DraggablePanelHeader } from "./draggable-panel-header";
 import type { ArrangementTrack, BlockMetadata } from "@/lib/project/types";
-import type { PanelDragData } from "./draggable-panel-header";
 
 // =============================================================================
 // Tracks Canvas Component

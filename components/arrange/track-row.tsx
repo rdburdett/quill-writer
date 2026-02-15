@@ -25,8 +25,10 @@ interface TrackRowProps {
 	onBlockDrop: (
 		filePath: string,
 		targetTrackIndex: number,
+		targetSceneIndex: number,
 		targetSlot: number,
 		sourceTrackIndex?: number,
+		sourceSceneIndex?: number,
 		sourceSlot?: number
 	) => void;
 	onToggleIncluded: (filePath: string, included: boolean) => void;
@@ -59,9 +61,8 @@ export function TrackRow({
 
 		return dropTargetForElements({
 			element,
-			canDrop: ({ source }) => {
-				return source.data.type === "arrange-block";
-			},
+			canDrop: ({ source }) =>
+				source.data.type === "arrange-block" || source.data.type === "file",
 			onDragEnter: () => {
 				setIsDragOver(true);
 			},
@@ -71,8 +72,20 @@ export function TrackRow({
 			onDrop: ({ source }) => {
 				setIsDragOver(false);
 				if (trackBlocks.length === 0) {
-					const dragData = source.data as BlockDragData;
-					onBlockDrop(dragData.filePath, trackIndex, 0, dragData.sourceTrack, dragData.sourceSlot);
+					const isFile = source.data.type === "file";
+					const filePath = isFile
+						? (source.data.filePath as string)
+						: (source.data as unknown as BlockDragData).filePath;
+					const dragData = source.data as unknown as BlockDragData;
+					onBlockDrop(
+						filePath,
+						trackIndex,
+						0,
+						0,
+						isFile ? undefined : dragData.sourceTrack,
+						isFile ? undefined : dragData.sourceSceneIndex,
+						isFile ? undefined : dragData.sourceSlot
+					);
 				}
 			},
 		});
@@ -166,6 +179,7 @@ export function TrackRow({
 								<div key={filePath}>
 									<DropZone
 										trackIndex={trackIndex}
+										sceneIndex={0}
 										slot={index}
 										onDrop={onBlockDrop}
 									/>
@@ -181,6 +195,7 @@ export function TrackRow({
 							))}
 							<DropZone
 								trackIndex={trackIndex}
+								sceneIndex={0}
 								slot={trackBlocks.length}
 								onDrop={onBlockDrop}
 							/>

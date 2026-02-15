@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
-import { draggable, dropTargetForElements } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
+import { draggable } from "@atlaskit/pragmatic-drag-and-drop/element/adapter";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 // =============================================================================
 
 export interface PanelDragData {
+	[key: string]: unknown;
 	type: "panel";
 	panelId: string;
 }

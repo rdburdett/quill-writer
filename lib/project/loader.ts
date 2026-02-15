@@ -8,6 +8,7 @@ import { readTextFile, writeTextFile, fileExists } from "@/lib/filesystem";
 import {
 	type QuillProject,
 	type BlockMetadata,
+	type ArrangementPosition,
 	type Block,
 	type FolderNode,
 	QUILL_FILE_NAME,
@@ -88,6 +89,9 @@ function migrateProject(project: QuillProject): QuillProject {
 	if (!project.blocks) project.blocks = {};
 	if (!project.characters) project.characters = [];
 	if (!project.arrangementTracks) project.arrangementTracks = [];
+	if (!project.arrangementScenes) {
+		project.arrangementScenes = [{ id: "default", name: "Scene 1", order: 0 }];
+	}
 	if (!project.settings) {
 		project.settings = {
 			blockSuggestionMode: "manual",
@@ -275,7 +279,8 @@ export async function createBlock(
 	project: QuillProject,
 	folderPath: string,
 	filename: string,
-	content: string = ""
+	content: string = "",
+	initialArrangement?: ArrangementPosition
 ): Promise<{ project: QuillProject; filePath: string }> {
 	// Ensure the folder exists
 	const folderParts = folderPath.split("/").filter(Boolean);
@@ -293,7 +298,10 @@ export async function createBlock(
 	await writeTextFile(directoryHandle, filePath, content);
 
 	// Add metadata
-	const metadata = createBlockMetadata();
+	const metadata: BlockMetadata = {
+		...createBlockMetadata(),
+		...(initialArrangement && { arrangement: initialArrangement }),
+	};
 	const newBlocks = { ...project.blocks, [filePath]: metadata };
 
 	return {

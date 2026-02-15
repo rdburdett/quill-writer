@@ -43,7 +43,6 @@ declare module "novel" {
 	};
 
 	// Slash-command suggestion helpers.
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	export interface SuggestionItem {
 		title: string;
 		description: string;
