@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 // =============================================================================
 
 export interface PanelDragData {
+	[key: string]: unknown;
 	type: "panel";
 	panelId: string;
 }

@@ -42,6 +42,9 @@ export async function migrateToCrdtFormat(
 		characters: existingProject.characters,
 		settings: existingProject.settings as unknown as Record<string, unknown>,
 		arrangementTracks: existingProject.arrangementTracks,
+		arrangementScenes:
+			existingProject.arrangementScenes ??
+			([{ id: "default", name: "Scene 1", order: 0 }] as unknown),
 	});
 	
 	// Migrate markdown files to docs folder

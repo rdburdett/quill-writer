@@ -8,6 +8,14 @@ import { Switch } from "@/components/ui/switch";
 import { getBlockDisplayTitle, type BlockDragData } from "./types";
 import type { BlockMetadata } from "@/lib/project/types";
 
+function hexToRgba(hex: string, alpha: number): string {
+	const n = parseInt(hex.slice(1), 16);
+	const r = (n >> 16) & 0xff;
+	const g = (n >> 8) & 0xff;
+	const b = n & 0xff;
+	return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // =============================================================================
 // Block Card Component
 // =============================================================================
@@ -15,14 +23,18 @@ import type { BlockMetadata } from "@/lib/project/types";
 interface BlockCardProps {
 	filePath: string;
 	metadata: BlockMetadata;
+	/** Track color: card uses this as a background tint */
+	trackColor?: string;
 	isSelected: boolean;
 	onSelect: () => void;
 	onDrop: (
 		filePath: string,
 		targetTrackIndex: number,
+		targetSceneIndex: number,
 		targetSlot: number,
 		sourceTrackIndex?: number,
-		sourceSlot?: number
+		sourceSceneIndex?: number,
+		sourceSlot?: number,
 	) => void;
 	onToggleIncluded?: (filePath: string, included: boolean) => void;
 }
@@ -30,6 +42,7 @@ interface BlockCardProps {
 export function BlockCard({
 	filePath,
 	metadata,
+	trackColor,
 	isSelected,
 	onSelect,
 	onDrop,
@@ -52,6 +65,7 @@ export function BlockCard({
 					type: "arrange-block",
 					filePath,
 					sourceTrack: arrangement?.track,
+					sourceSceneIndex: arrangement?.sceneIndex,
 					sourceSlot: arrangement?.slot,
 				};
 				return dragData;
@@ -69,28 +83,35 @@ export function BlockCard({
 		<Card
 			ref={cardRef}
 			className={cn(
-				"cursor-grab active:cursor-grabbing p-3 transition-all",
+				"cursor-grab active:cursor-grabbing rounded-sm px-2 py-1.5 transition-all",
 				"hover:shadow-md",
-				isSelected && "ring-2 ring-primary",
-				!isIncluded && "opacity-60"
+				isSelected && "ring-1 ring-primary",
+				!isIncluded && "opacity-60",
 			)}
+			style={
+				trackColor
+					? { backgroundColor: hexToRgba(trackColor, 0.6) }
+					: undefined
+			}
 			onClick={onSelect}
 		>
-			<div className="flex items-start justify-between gap-2">
+			<div className="flex items-center justify-between gap-2">
 				<div className="flex-1 min-w-0">
-					<h3 className="text-sm font-medium truncate">{displayTitle}</h3>
+					<h3 className="text-xs font-medium truncate">
+						{displayTitle}
+					</h3>
 					{metadata.tags.length > 0 && (
-						<div className="flex flex-wrap gap-1 mt-1">
+						<div className="flex flex-wrap gap-0.5 mt-0.5">
 							{metadata.tags.slice(0, 3).map((tag) => (
 								<span
 									key={tag}
-									className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
+									className="text-[10px] leading-tight px-1 py-px rounded bg-muted text-muted-foreground"
 								>
 									{tag}
 								</span>
 							))}
 							{metadata.tags.length > 3 && (
-								<span className="text-xs text-muted-foreground">
+								<span className="text-[10px] text-muted-foreground">
 									+{metadata.tags.length - 3}
 								</span>
 							)}
@@ -98,11 +119,15 @@ export function BlockCard({
 					)}
 				</div>
 				{onToggleIncluded && arrangement && (
-					<div className="flex items-center gap-2 shrink-0">
+					<div
+						className="flex items-center gap-2 shrink-0"
+						onClick={(e) => e.stopPropagation()}
+					>
 						<Switch
 							checked={isIncluded}
-							onCheckedChange={(checked) => onToggleIncluded(filePath, checked)}
-							onClick={(e) => e.stopPropagation()}
+							onCheckedChange={(checked) =>
+								onToggleIncluded(filePath, checked)
+							}
 						/>
 					</div>
 				)}

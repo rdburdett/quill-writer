@@ -1,32 +1,36 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import React, { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { useProjectContext } from "@/components/project-provider";
 import { cn } from "@/lib/utils";
-import type { ArrangementTrack } from "@/lib/project/types";
-import { getUnassignedBlocks, getBlocksForTrack, normalizeTrackSlots } from "./types";
-import { UnassignedPanel } from "./unassigned-panel";
-import { TracksCanvas } from "./tracks-canvas";
-import { InspectorPanel } from "./inspector-panel";
+import type { ArrangementTrack, ArrangementScene } from "@/lib/project/types";
+import { createBlock } from "@/lib/project/loader";
+import { titleToFilename } from "@/lib/filesystem/scanner";
+import { useArrangementContext } from "./arrangement-context";
+import { ArrangementGrid } from "./arrangement-grid";
+import { EditorPanel } from "./editor-panel";
 import { PanelBorder } from "./panel-border";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const MIN_PANEL_WIDTH = 150;
-const MAX_PANEL_WIDTH = 800;
+/** Minimum panel width in pixels (CSS floor) */
+const MIN_PANEL_PX = 150;
+/** Panel width bounds as percentage of content area */
+const MIN_PANEL_PCT = 10;
+const MAX_PANEL_PCT = 60;
+/** Default panel widths as percentage of content area */
 const DEFAULT_WIDTHS: Record<string, number> = {
-	unassigned: 256,
-	inspector: 320,
+	editor: 30,
 };
 
 // =============================================================================
 // Panel Types
 // =============================================================================
 
-type PanelId = "unassigned" | "tracks" | "inspector";
+type PanelId = "tracks" | "editor";
 
 // =============================================================================
 // Arrange Content Component
@@ -38,31 +42,52 @@ interface ArrangeContentProps {
 }
 
 export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
-	const { project, folderTree } = useProjectContext();
-	const [selectedBlockPath, setSelectedBlockPath] = useState<string | null>(null);
+	const { project, block, folderTree } = useProjectContext();
+	const {
+		selectedBlockPath,
+		setSelectedBlockPath,
+		sortedTracks,
+		sortedScenes,
+		handleBlockDrop,
+	} = useArrangementContext();
 
 	// =========================================================================
 	// File select handler (selects block for inspector)
 	// =========================================================================
+
+	const handleFileSelectRef = useRef<((path: string) => void) | null>(null);
 
 	const handleFileSelect = useCallback((path: string) => {
 		folderTree.select(path);
 		setSelectedBlockPath(path);
 	}, [folderTree]);
 
-	// Register the handler with the shell
+	// Keep ref updated
+	handleFileSelectRef.current = handleFileSelect;
+
+	// Register the handler with the shell (only once)
 	useEffect(() => {
-		onRegisterFileSelect(handleFileSelect);
-	}, [handleFileSelect, onRegisterFileSelect]);
+		onRegisterFileSelect((path: string) => {
+			if (handleFileSelectRef.current) {
+				handleFileSelectRef.current(path);
+			}
+		});
+	}, [onRegisterFileSelect]);
 
 	// =========================================================================
 	// Panel order (persisted to localStorage)
 	// =========================================================================
 
 	const [panelOrder, setPanelOrder] = useState<PanelId[]>(() => {
-		if (typeof window === "undefined") return ["unassigned", "tracks", "inspector"];
+		if (typeof window === "undefined") return ["tracks", "editor"];
 		const stored = window.localStorage.getItem("quill.arrange.panelOrder");
-		return stored ? JSON.parse(stored) : ["unassigned", "tracks", "inspector"];
+		if (!stored) return ["tracks", "editor"];
+		const parsed = JSON.parse(stored) as string[];
+		// Migrate: remove unassigned, map inspector->editor
+		const migrated = parsed
+			.filter((id) => id !== "unassigned")
+			.map((id) => (id === "inspector" ? "editor" : id)) as PanelId[];
+		return migrated.length > 0 ? migrated : ["tracks", "editor"];
 	});
 
 	useEffect(() => {
@@ -78,7 +103,20 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 	const [panelWidths, setPanelWidths] = useState<Record<string, number>>(() => {
 		if (typeof window === "undefined") return DEFAULT_WIDTHS;
 		const stored = window.localStorage.getItem("quill.arrange.panelWidths");
-		return stored ? { ...DEFAULT_WIDTHS, ...JSON.parse(stored) } : DEFAULT_WIDTHS;
+		if (!stored) return DEFAULT_WIDTHS;
+		const parsed = JSON.parse(stored) as Record<string, number>;
+		const migrated = { ...parsed };
+		if ("inspector" in migrated) {
+			migrated.editor = migrated.inspector;
+			delete migrated.inspector;
+		}
+		// Migrate old pixel values (>100) to percentage defaults
+		for (const key of Object.keys(migrated)) {
+			if (migrated[key] > 100) {
+				migrated[key] = DEFAULT_WIDTHS[key] ?? 30;
+			}
+		}
+		return { ...DEFAULT_WIDTHS, ...migrated };
 	});
 
 	const panelWidthsRef = useRef(panelWidths);
@@ -94,45 +132,34 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 	// Resize state
 	// =========================================================================
 
-	const resizeStateRef = useRef<{ panelId: string; startWidth: number } | null>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
+	const resizeStateRef = useRef<{ panelId: string; startPct: number } | null>(null);
 
 	const handleResizeStart = useCallback((leftPanel: PanelId, rightPanel: PanelId) => {
-		const widths = panelWidthsRef.current;
+		const pcts = panelWidthsRef.current;
 		if (leftPanel !== "tracks") {
-			resizeStateRef.current = { panelId: leftPanel, startWidth: widths[leftPanel] ?? DEFAULT_WIDTHS[leftPanel] ?? 256 };
+			resizeStateRef.current = { panelId: leftPanel, startPct: pcts[leftPanel] ?? DEFAULT_WIDTHS[leftPanel] ?? 30 };
 		} else if (rightPanel !== "tracks") {
-			resizeStateRef.current = { panelId: rightPanel, startWidth: widths[rightPanel] ?? DEFAULT_WIDTHS[rightPanel] ?? 256 };
+			resizeStateRef.current = { panelId: rightPanel, startPct: pcts[rightPanel] ?? DEFAULT_WIDTHS[rightPanel] ?? 30 };
 		}
 	}, []);
 
 	const handleResize = useCallback((leftPanel: PanelId, rightPanel: PanelId, deltaX: number) => {
 		if (!resizeStateRef.current) return;
-		const { panelId, startWidth } = resizeStateRef.current;
+		const containerWidth = containerRef.current?.offsetWidth ?? 1000;
+		const { panelId, startPct } = resizeStateRef.current;
 
 		const isResizingLeft = panelId === leftPanel;
-		const newWidth = isResizingLeft ? startWidth + deltaX : startWidth - deltaX;
-		const clampedWidth = Math.max(MIN_PANEL_WIDTH, Math.min(MAX_PANEL_WIDTH, newWidth));
+		const deltaPct = (deltaX / containerWidth) * 100;
+		const newPct = isResizingLeft ? startPct + deltaPct : startPct - deltaPct;
+		const clampedPct = Math.max(MIN_PANEL_PCT, Math.min(MAX_PANEL_PCT, newPct));
 
-		setPanelWidths((prev) => ({ ...prev, [panelId]: clampedWidth }));
+		setPanelWidths((prev) => ({ ...prev, [panelId]: clampedPct }));
 	}, []);
 
 	const handleResizeEnd = useCallback(() => {
 		resizeStateRef.current = null;
 	}, []);
-
-	// =========================================================================
-	// Project data
-	// =========================================================================
-
-	const sortedTracks = useMemo(() => {
-		if (!project.project) return [];
-		return [...project.project.arrangementTracks].sort((a, b) => a.order - b.order);
-	}, [project.project]);
-
-	const unassignedBlocks = useMemo(() => {
-		if (!project.project) return [];
-		return getUnassignedBlocks(project.project.blocks, sortedTracks);
-	}, [project.project, sortedTracks]);
 
 	// =========================================================================
 	// Handlers
@@ -150,65 +177,18 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 		});
 	}, [project, sortedTracks]);
 
-	const handleBlockDrop = useCallback(
-		(
-			filePath: string,
-			targetTrackIndex: number,
-			targetSlot: number,
-			sourceTrackIndex?: number,
-			sourceSlot?: number
-		) => {
-			if (!project.project) return;
-
-			const updatedBlocks = { ...project.project.blocks };
-			const blockMetadata = updatedBlocks[filePath];
-			if (!blockMetadata) return;
-
-			if (sourceTrackIndex !== undefined && sourceSlot !== undefined) {
-				const sourceBlocks = getBlocksForTrack(updatedBlocks, sourceTrackIndex);
-				sourceBlocks.forEach(({ filePath: otherPath, metadata }) => {
-					if (otherPath === filePath) return;
-					const slot = metadata.arrangement?.slot ?? 0;
-					if (slot > sourceSlot) {
-						updatedBlocks[otherPath] = {
-							...metadata,
-							arrangement: { ...metadata.arrangement!, slot: slot - 1 },
-						};
-					}
-				});
-			}
-
-			const targetBlocks = getBlocksForTrack(updatedBlocks, targetTrackIndex);
-			targetBlocks.forEach(({ filePath: otherPath, metadata }) => {
-				if (otherPath === filePath) return;
-				const slot = metadata.arrangement?.slot ?? 0;
-				if (slot >= targetSlot) {
-					updatedBlocks[otherPath] = {
-						...metadata,
-						arrangement: { ...metadata.arrangement!, slot: slot + 1 },
-					};
-				}
-			});
-
-			updatedBlocks[filePath] = {
-				...blockMetadata,
-				arrangement: {
-					track: targetTrackIndex,
-					slot: targetSlot,
-					included: blockMetadata.arrangement?.included ?? true,
-				},
-			};
-
-			const normalizedBlocks = normalizeTrackSlots(updatedBlocks, targetTrackIndex);
-			if (sourceTrackIndex !== undefined) {
-				const finalBlocks = normalizeTrackSlots(normalizedBlocks, sourceTrackIndex);
-				project.updateProject({ blocks: finalBlocks });
-			} else {
-				project.updateProject({ blocks: normalizedBlocks });
-			}
-		},
-		[project]
-	);
+	const handleAddScene = useCallback(() => {
+		if (!project.project) return;
+		const scenes = sortedScenes;
+		const newScene: ArrangementScene = {
+			id: crypto.randomUUID(),
+			name: `Scene ${scenes.length + 1}`,
+			order: scenes.length,
+		};
+		project.updateProject({
+			arrangementScenes: [...scenes, newScene],
+		});
+	}, [project, sortedScenes]);
 
 	const handleToggleIncluded = useCallback(
 		(filePath: string, included: boolean) => {
@@ -236,14 +216,226 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 		[project, sortedTracks]
 	);
 
+	const handleSceneRename = useCallback(
+		(sceneId: string, newName: string) => {
+			if (!project.project) return;
+			const updatedScenes = sortedScenes.map((scene) =>
+				scene.id === sceneId ? { ...scene, name: newName } : scene
+			);
+			project.updateProject({ arrangementScenes: updatedScenes });
+		},
+		[project, sortedScenes]
+	);
+
+	const handleTrackColorChange = useCallback(
+		(trackId: string, color: string | undefined) => {
+			if (!project.project) return;
+			const updatedTracks = sortedTracks.map((track) =>
+				track.id === trackId ? { ...track, color } : track
+			);
+			project.updateProject({ arrangementTracks: updatedTracks });
+		},
+		[project, sortedTracks]
+	);
+
+	const handleSceneColorChange = useCallback(
+		(sceneId: string, color: string | undefined) => {
+			if (!project.project) return;
+			const updatedScenes = sortedScenes.map((scene) =>
+				scene.id === sceneId ? { ...scene, color } : scene
+			);
+			project.updateProject({ arrangementScenes: updatedScenes });
+		},
+		[project, sortedScenes]
+	);
+
+	const handleTrackReorder = useCallback(
+		(sourceTrackId: string, targetIndex: number) => {
+			if (!project.project) return;
+			const sourceIndex = sortedTracks.findIndex((t) => t.id === sourceTrackId);
+			if (sourceIndex === -1 || sourceIndex === targetIndex) return;
+
+			// Build old index -> trackId mapping for block updates
+			const oldIndexToTrackId = new Map(
+				sortedTracks.map((t, i) => [i, t.id])
+			);
+			// Reorder tracks (adjust target after removal)
+			const reordered = [...sortedTracks];
+			const [removed] = reordered.splice(sourceIndex, 1);
+			const insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+			reordered.splice(insertIndex, 0, removed);
+
+			// Assign new order values
+			const updatedTracks = reordered.map((t, i) => ({ ...t, order: i }));
+
+			// Update block arrangement.track indices
+			const trackIdToNewIndex = new Map(
+				updatedTracks.map((t, i) => [t.id, i])
+			);
+
+			const updatedBlocks = { ...project.project.blocks };
+			for (const [filePath, metadata] of Object.entries(updatedBlocks)) {
+				const arr = metadata.arrangement;
+				if (!arr) continue;
+				const oldIdx = arr.track;
+				const trackId = oldIndexToTrackId.get(oldIdx);
+				if (trackId === undefined) continue;
+				const newIdx = trackIdToNewIndex.get(trackId);
+				if (newIdx !== undefined && newIdx !== oldIdx) {
+					updatedBlocks[filePath] = {
+						...metadata,
+						arrangement: { ...arr, track: newIdx },
+					};
+				}
+			}
+
+			project.updateProject({
+				arrangementTracks: updatedTracks,
+				blocks: updatedBlocks,
+			});
+		},
+		[project, sortedTracks]
+	);
+
+	const handleDeleteTrack = useCallback(
+		(trackId: string) => {
+			if (!project.project) return;
+			const deletedIndex = sortedTracks.findIndex((t) => t.id === trackId);
+			if (deletedIndex === -1) return;
+
+			const updatedTracks = sortedTracks
+				.filter((t) => t.id !== trackId)
+				.map((t, i) => ({ ...t, order: i }));
+
+			const updatedBlocks = { ...project.project.blocks };
+			for (const [filePath, metadata] of Object.entries(updatedBlocks)) {
+				const arr = metadata.arrangement;
+				if (!arr) continue;
+				if (arr.track === deletedIndex) {
+					const { arrangement: _a, ...rest } = metadata;
+					updatedBlocks[filePath] = rest as typeof metadata;
+				} else if (arr.track > deletedIndex) {
+					updatedBlocks[filePath] = {
+						...metadata,
+						arrangement: { ...arr, track: arr.track - 1 },
+					};
+				}
+			}
+
+			project.updateProject({
+				arrangementTracks: updatedTracks,
+				blocks: updatedBlocks,
+			});
+		},
+		[project, sortedTracks]
+	);
+
+	const handleDeleteScene = useCallback(
+		(sceneId: string) => {
+			if (!project.project) return;
+			if (sortedScenes.length <= 1) return;
+			const deletedIndex = sortedScenes.findIndex((s) => s.id === sceneId);
+			if (deletedIndex === -1) return;
+
+			const updatedScenes = sortedScenes
+				.filter((s) => s.id !== sceneId)
+				.map((s, i) => ({ ...s, order: i }));
+
+			const updatedBlocks = { ...project.project.blocks };
+			for (const [filePath, metadata] of Object.entries(updatedBlocks)) {
+				const arr = metadata.arrangement;
+				if (!arr) continue;
+				const sceneIdx = arr.sceneIndex ?? 0;
+				if (sceneIdx === deletedIndex) {
+					const { arrangement: _a, ...rest } = metadata;
+					updatedBlocks[filePath] = rest as typeof metadata;
+				} else if (sceneIdx > deletedIndex) {
+					updatedBlocks[filePath] = {
+						...metadata,
+						arrangement: { ...arr, sceneIndex: sceneIdx - 1 },
+					};
+				}
+			}
+
+			project.updateProject({
+				arrangementScenes: updatedScenes,
+				blocks: updatedBlocks,
+			});
+		},
+		[project, sortedScenes]
+	);
+
+	const handleCreateBlockInCell = useCallback(
+		async (trackIndex: number, sceneIndex: number) => {
+			if (!project.directoryHandle || !project.project) return;
+
+			const track = sortedTracks[trackIndex];
+			const scene = sortedScenes[sceneIndex];
+			if (!track || !scene) return;
+
+			const folderPath = project.project.settings.defaultPoolPath ?? "unsorted";
+			const baseTitle = `${track.name} - ${scene.name}`;
+			let filename = titleToFilename(baseTitle);
+
+			const existingInFolder =
+				folderPath === ""
+					? Object.keys(project.project.blocks).filter((p) => !p.includes("/"))
+					: Object.keys(project.project.blocks).filter((p) =>
+							p.startsWith(folderPath + "/")
+						);
+			const existingBasenames = new Set(
+				existingInFolder.map((p) => p.split("/").pop() ?? "")
+			);
+			let counter = 1;
+			while (existingBasenames.has(filename)) {
+				filename = filename.replace(/\.md$/, `-${++counter}.md`);
+			}
+
+			const content = `# ${baseTitle}\n\n`;
+			const initialArrangement = {
+				track: trackIndex,
+				slot: 0,
+				sceneIndex,
+				included: true,
+			};
+
+			try {
+				const { project: updatedProject, filePath } = await createBlock(
+					project.directoryHandle,
+					project.project,
+					folderPath,
+					filename,
+					content,
+					initialArrangement
+				);
+				project.updateProject(updatedProject);
+				await project.refreshTree();
+				setSelectedBlockPath(filePath);
+				folderTree.revealPath(filePath);
+			} catch (err) {
+				console.error("Failed to create block in cell:", err);
+			}
+		},
+		[project, sortedTracks, sortedScenes, setSelectedBlockPath, folderTree]
+	);
+
+	const handleContentChange = useCallback(
+		(filePath: string, content: string) => {
+			block.updateContent(filePath, content);
+		},
+		[block]
+	);
+
 	const handlePanelReorder = useCallback((sourcePanelId: string, insertIndex: number) => {
+		if (sourcePanelId === "unassigned") return; // No longer a panel
+		const normalizedId = sourcePanelId === "inspector" ? "editor" : sourcePanelId;
 		setPanelOrder((currentOrder) => {
 			const newOrder = [...currentOrder];
-			const sourceIndex = newOrder.indexOf(sourcePanelId as PanelId);
+			const sourceIndex = newOrder.indexOf(normalizedId as PanelId);
 			if (sourceIndex === -1) return currentOrder;
 			newOrder.splice(sourceIndex, 1);
 			const adjustedIndex = sourceIndex < insertIndex ? insertIndex - 1 : insertIndex;
-			newOrder.splice(adjustedIndex, 0, sourcePanelId as PanelId);
+			newOrder.splice(adjustedIndex, 0, normalizedId as PanelId);
 			return newOrder;
 		});
 	}, []);
@@ -253,41 +445,42 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 	// =========================================================================
 
 	const getPanelStyle = (panelId: PanelId): React.CSSProperties => {
-		if (panelId === "tracks") return { flex: 1 };
-		return { width: `${panelWidths[panelId] ?? DEFAULT_WIDTHS[panelId] ?? 256}px`, flexShrink: 0 };
+		if (panelId === "tracks") return { flex: 1, minWidth: MIN_PANEL_PX };
+		const pct = panelWidths[panelId] ?? DEFAULT_WIDTHS[panelId] ?? 30;
+		return { flex: `0 0 ${pct}%`, minWidth: MIN_PANEL_PX };
 	};
 
 	const renderPanel = (panelId: PanelId) => {
-		if (panelId === "unassigned") {
-			return (
-				<UnassignedPanel
-					blocks={unassignedBlocks}
-					onBlockSelect={setSelectedBlockPath}
-					selectedBlockPath={selectedBlockPath}
-					onBlockDrop={handleBlockDrop}
-				/>
-			);
-		}
 		if (panelId === "tracks") {
 			return sortedTracks.length === 0 ? (
 				<EmptyTracksState onAddTrack={handleAddTrack} />
 			) : (
-				<TracksCanvas
+				<ArrangementGrid
 					tracks={sortedTracks}
+					scenes={sortedScenes}
 					blocks={project.project?.blocks ?? {}}
 					onBlockDrop={handleBlockDrop}
-					onToggleIncluded={handleToggleIncluded}
 					onBlockSelect={setSelectedBlockPath}
 					selectedBlockPath={selectedBlockPath}
 					onTrackRename={handleTrackRename}
+					onTrackColorChange={handleTrackColorChange}
+					onSceneRename={handleSceneRename}
+					onSceneColorChange={handleSceneColorChange}
+					onTrackReorder={handleTrackReorder}
+					onAddScene={handleAddScene}
+					onAddTrack={handleAddTrack}
+					onDeleteTrack={handleDeleteTrack}
+					onDeleteScene={handleDeleteScene}
+					onCreateBlockInCell={handleCreateBlockInCell}
 				/>
 			);
 		}
-		if (panelId === "inspector") {
+		if (panelId === "editor") {
 			return (
-				<InspectorPanel
+				<EditorPanel
 					selectedBlockPath={selectedBlockPath}
 					blocks={project.project?.blocks ?? {}}
+					onContentChange={handleContentChange}
 				/>
 			);
 		}
@@ -301,7 +494,7 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 	return (
 		<div className="flex h-full flex-col overflow-hidden">
 			{/* Arrange Panels with resize handles between them */}
-			<div className="flex flex-1 overflow-hidden">
+			<div ref={containerRef} className="flex flex-1 overflow-hidden">
 				{panelOrder.map((panelId, index) => {
 					const isLast = index === panelOrder.length - 1;
 					const nextPanelId = isLast ? null : panelOrder[index + 1];

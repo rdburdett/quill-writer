@@ -5,54 +5,51 @@ import { ChevronDown, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useProjectContext } from "@/components/project-provider";
 import { useEditorSettingsContext } from "@/components/theme-provider";
+import { NovelEditor } from "@/components/novel-editor";
 import { getBlockDisplayTitle } from "./types";
 import { DraggablePanelHeader } from "./draggable-panel-header";
 import type { BlockMetadata } from "@/lib/project/types";
 
 // =============================================================================
-// Inspector Panel Component
+// Editor Panel Component
 // =============================================================================
 
-interface InspectorPanelProps {
+interface EditorPanelProps {
 	selectedBlockPath: string | null;
 	blocks: Record<string, BlockMetadata>;
+	onContentChange: (filePath: string, content: string) => void;
 }
 
-export function InspectorPanel({ selectedBlockPath, blocks }: InspectorPanelProps) {
-	const { project } = useProjectContext();
-	const { showBorders } = useEditorSettingsContext();
+export function EditorPanel({ selectedBlockPath, blocks, onContentChange }: EditorPanelProps) {
+	const { block } = useProjectContext();
+	const { showBorders, showEdgeFade } = useEditorSettingsContext();
 
 	const selectedBlock = selectedBlockPath ? blocks[selectedBlockPath] : null;
 	const displayTitle = selectedBlockPath ? getBlockDisplayTitle(selectedBlockPath) : null;
 
 	// =========================================================================
-	// Load block text content on selection
+	// Load block into block system when selected
 	// =========================================================================
 
-	const [blockContent, setBlockContent] = useState<string | null>(null);
 	const [isLoadingContent, setIsLoadingContent] = useState(false);
 
 	useEffect(() => {
-		if (!selectedBlockPath) {
-			setBlockContent(null);
-			return;
-		}
+		if (!selectedBlockPath) return;
 
 		let cancelled = false;
-		setIsLoadingContent(true);
-
-		project.loadBlock(selectedBlockPath).then((block) => {
-			if (cancelled) return;
-			setBlockContent(block?.content ?? null);
-			setIsLoadingContent(false);
-		}).catch(() => {
-			if (cancelled) return;
-			setBlockContent(null);
-			setIsLoadingContent(false);
+		queueMicrotask(() => {
+			if (!cancelled) setIsLoadingContent(true);
 		});
 
-		return () => { cancelled = true; };
-	}, [selectedBlockPath, project]);
+		block.openBlock(selectedBlockPath).finally(() => {
+			if (!cancelled) setIsLoadingContent(false);
+		});
+
+		return () => {
+			cancelled = true;
+		};
+		// block.openBlock is stable; block object reference changes on state updates, causing infinite loop
+	}, [selectedBlockPath]);
 
 	// =========================================================================
 	// Metadata collapsed state
@@ -60,42 +57,77 @@ export function InspectorPanel({ selectedBlockPath, blocks }: InspectorPanelProp
 
 	const [isMetadataOpen, setIsMetadataOpen] = useState(false);
 
+	const activeBlock = block.getActiveBlock();
+	const isActiveBlockSelected = selectedBlockPath && activeBlock?.filePath === selectedBlockPath;
+
 	return (
 		<div className="flex h-full flex-col bg-muted/30">
 			{/* Header */}
 			<div className={cn("px-4 py-3", showBorders && "border-b border-border")}>
 				<DraggablePanelHeader
-					panelId="inspector"
-					title="Inspector"
+					panelId="editor"
+					title="Editor"
 				/>
 			</div>
 
 			{selectedBlock && selectedBlockPath ? (
-				<div className="flex flex-1 flex-col overflow-hidden">
+				<div className="flex flex-1 flex-col overflow-hidden min-h-0">
 					{/* Block Title Bar */}
-					<div className={cn("flex items-center gap-2 px-4 py-2", showBorders && "border-b border-border")}>
+					<div className={cn("flex items-center gap-2 px-4 py-2 shrink-0", showBorders && "border-b border-border")}>
 						<FileText className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
 						<span className="text-sm font-medium truncate">{displayTitle}</span>
 					</div>
 
-					{/* Text Preview (main area) */}
-					<div className="flex-1 overflow-auto">
-						{isLoadingContent ? (
-							<div className="flex items-center justify-center py-12">
-								<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-							</div>
-						) : blockContent ? (
-							<div className="p-4">
-								<pre className="text-sm whitespace-pre-wrap wrap-break-word font-[inherit] leading-relaxed">
-									{blockContent}
-								</pre>
-							</div>
-						) : (
-							<div className="text-center text-sm text-muted-foreground py-8">
-								No content
-							</div>
+					{/* Editor Area - relative wrapper for edge fade overlays */}
+					<div className="relative flex-1 min-h-0">
+						<div className="absolute inset-0 overflow-auto">
+							{isLoadingContent ? (
+								<div className="flex items-center justify-center py-12">
+									<Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+								</div>
+							) : isActiveBlockSelected ? (
+								<div className="mx-auto max-w-3xl px-4 py-6">
+									<NovelEditor
+										key={selectedBlockPath}
+										initialContent={activeBlock?.content ?? ""}
+										onChange={(content) => onContentChange(selectedBlockPath, content)}
+										editorKey={selectedBlockPath}
+										sourceFilePath={selectedBlockPath}
+									/>
+								</div>
+							) : (
+								<div className="text-center text-sm text-muted-foreground py-8">
+									Loading...
+								</div>
+							)}
+						</div>
+						{/* Edge fade overlays - positioned outside scroll container so they stay fixed */}
+						{showEdgeFade && (
+							<>
+								<div
+									className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-linear-to-b from-muted/30 to-transparent"
+									aria-hidden="true"
+								/>
+								<div
+									className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-linear-to-t from-muted/30 to-transparent"
+									aria-hidden="true"
+								/>
+							</>
 						)}
 					</div>
+
+					{/* Status Bar */}
+					{isActiveBlockSelected && activeBlock && (
+						<div className={cn("flex items-center justify-end gap-3 px-4 py-1.5 shrink-0 text-xs text-muted-foreground", showBorders && "border-t border-border")}>
+							{block.unsavedBlocks.has(selectedBlockPath) && (
+								<span>Unsaved</span>
+							)}
+							{block.savingBlocks.has(selectedBlockPath) && (
+								<span className="animate-pulse">Saving...</span>
+							)}
+							<span>{activeBlock.wordCount.toLocaleString()} words</span>
+						</div>
+					)}
 
 					{/* Collapsible Metadata Section */}
 					<div className={cn("shrink-0", showBorders && "border-t border-border")}>
@@ -157,7 +189,7 @@ export function InspectorPanel({ selectedBlockPath, blocks }: InspectorPanelProp
 				</div>
 			) : (
 				<div className="flex-1 flex items-center justify-center">
-					<p className="text-sm text-muted-foreground">Select a block to preview</p>
+					<p className="text-sm text-muted-foreground">Select a block to edit</p>
 				</div>
 			)}
 		</div>

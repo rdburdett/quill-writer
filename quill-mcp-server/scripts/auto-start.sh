@@ -19,6 +19,7 @@ if [[ "$PWD" == *"quill-writer"* ]] || [[ -d "quill-mcp-server" ]]; then
 
 	# Check if server is already running
 	if ! lsof -Pi :5051 -sTCP:LISTEN -t >/dev/null 2>&1; then
+		ORIGINAL_DIR="$PWD"
 		cd "$SERVER_DIR" || return
 		echo "🚀 Auto-starting Quill Project Context Server..."
 		node server.js > /tmp/quill-context-server.log 2>&1 &
@@ -29,6 +30,7 @@ if [[ "$PWD" == *"quill-writer"* ]] || [[ -d "quill-mcp-server" ]]; then
 		else
 			echo "⚠ Failed to start server (check logs: cat /tmp/quill-context-server.log)"
 		fi
+		cd "$ORIGINAL_DIR" || return
 	fi
 fi
 

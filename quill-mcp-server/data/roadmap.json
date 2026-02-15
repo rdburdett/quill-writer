@@ -49,6 +49,12 @@
 					"title": "Settings Page",
 					"description": "Font selection, tab size, editor preferences",
 					"status": "done"
+				},
+				{
+					"id": "m1-8",
+					"title": "Auto-save toggle in settings",
+					"description": "User-controlled toggle in settings to enable or disable auto-save",
+					"status": "planned"
 				}
 			]
 		},

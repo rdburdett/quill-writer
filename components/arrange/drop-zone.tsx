@@ -11,17 +11,25 @@ import type { BlockDragData } from "./types";
 
 interface DropZoneProps {
 	trackIndex: number;
+	sceneIndex: number;
 	slot: number;
 	onDrop: (
 		filePath: string,
 		targetTrackIndex: number,
+		targetSceneIndex: number,
 		targetSlot: number,
 		sourceTrackIndex?: number,
+		sourceSceneIndex?: number,
 		sourceSlot?: number
 	) => void;
 }
 
-export function DropZone({ trackIndex, slot, onDrop }: DropZoneProps) {
+export function DropZone({
+	trackIndex,
+	sceneIndex,
+	slot,
+	onDrop,
+}: DropZoneProps) {
 	const zoneRef = useRef<HTMLDivElement>(null);
 	const [isDragOver, setIsDragOver] = useState(false);
 
@@ -31,9 +39,8 @@ export function DropZone({ trackIndex, slot, onDrop }: DropZoneProps) {
 
 		return dropTargetForElements({
 			element,
-			canDrop: ({ source }) => {
-				return source.data.type === "arrange-block";
-			},
+			canDrop: ({ source }) =>
+				source.data.type === "arrange-block" || source.data.type === "file",
 			getData: () => ({ trackIndex, slot }),
 			onDragEnter: () => {
 				setIsDragOver(true);
@@ -43,17 +50,23 @@ export function DropZone({ trackIndex, slot, onDrop }: DropZoneProps) {
 			},
 			onDrop: ({ source }) => {
 				setIsDragOver(false);
-				const dragData = source.data as BlockDragData;
+				const isFile = source.data.type === "file";
+				const filePath = isFile
+					? (source.data.filePath as string)
+					: (source.data as unknown as BlockDragData).filePath;
+				const dragData = source.data as unknown as BlockDragData;
 				onDrop(
-					dragData.filePath,
+					filePath,
 					trackIndex,
+					sceneIndex,
 					slot,
-					dragData.sourceTrack,
-					dragData.sourceSlot
+					isFile ? undefined : dragData.sourceTrack,
+					isFile ? undefined : dragData.sourceSceneIndex,
+					isFile ? undefined : dragData.sourceSlot
 				);
 			},
 		});
-	}, [trackIndex, slot, onDrop]);
+	}, [trackIndex, sceneIndex, slot, onDrop]);
 
 	return (
 		<div

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FolderTree, LayoutGrid, ListTree, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { FolderSidebar, type FolderSidebarProps } from "@/components/folder-sidebar";
+import { BlocksTab } from "./blocks-tab";
 
 // =============================================================================
 // Sidebar Tab Types
@@ -80,11 +81,7 @@ export function SidebarContainer(props: SidebarContainerProps) {
 				{activeTab === "files" && (
 					<FolderSidebar {...folderSidebarProps} onSelect={handleFileSelect} />
 				)}
-				{activeTab === "blocks" && (
-					<div className="flex h-full items-center justify-center p-4">
-						<p className="text-sm text-muted-foreground">Block browser coming soon</p>
-					</div>
-				)}
+				{activeTab === "blocks" && <BlocksTab />}
 				{activeTab === "outline" && (
 					<div className="flex h-full items-center justify-center p-4">
 						<p className="text-sm text-muted-foreground">Outline view coming soon</p>

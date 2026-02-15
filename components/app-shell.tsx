@@ -1,20 +1,19 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useProjectContext } from "@/components/project-provider";
 import { useEditorSettingsContext } from "@/components/theme-provider";
 import { AppMenu } from "@/components/app-menu";
-import { ViewToggle, type ViewMode } from "@/components/view-toggle";
 import { SidebarContainer } from "@/components/sidebar/sidebar-container";
 import { cn } from "@/lib/utils";
 import { createBlock, moveBlock } from "@/lib/project/loader";
 import { createDirectory, readTextFile, writeTextFile } from "@/lib/filesystem";
 import { titleToFilename } from "@/lib/filesystem/scanner";
 import type { TextDragData } from "@/components/tab-system";
-import { EditorContent } from "@/components/editor-content";
 import { ArrangeContent } from "@/components/arrange/arrange-content";
+import { ArrangementProvider } from "@/components/arrange/arrangement-context";
 
 // =============================================================================
 // File Dialogs
@@ -238,12 +237,6 @@ export function AppShell() {
 	const { showBorders } = useEditorSettingsContext();
 
 	// =========================================================================
-	// Mode state
-	// =========================================================================
-
-	const [activeMode, setActiveMode] = useState<ViewMode>("write");
-
-	// =========================================================================
 	// Sidebar collapse state
 	// =========================================================================
 
@@ -262,6 +255,70 @@ export function AppShell() {
 	const handleToggleSidebar = useCallback(() => {
 		setIsSidebarCollapsed((prev) => !prev);
 	}, []);
+
+	// =========================================================================
+	// Sidebar width (draggable resize)
+	// =========================================================================
+
+	const MIN_SIDEBAR_WIDTH = 180;
+	const MAX_SIDEBAR_WIDTH = 480;
+	const DEFAULT_SIDEBAR_WIDTH = 256;
+
+	const [sidebarWidth, setSidebarWidth] = useState(() => {
+		if (typeof window === "undefined") return DEFAULT_SIDEBAR_WIDTH;
+		const stored = window.localStorage.getItem("sidebar.width");
+		return stored ? Number(stored) : DEFAULT_SIDEBAR_WIDTH;
+	});
+
+	useEffect(() => {
+		if (typeof window !== "undefined") {
+			window.localStorage.setItem("sidebar.width", String(sidebarWidth));
+		}
+	}, [sidebarWidth]);
+
+	const [isSidebarResizing, setIsSidebarResizing] = useState(false);
+	const sidebarResizeStartX = useRef(0);
+	const sidebarResizeStartWidth = useRef(0);
+
+	const handleSidebarResizeStart = useCallback(
+		(e: React.MouseEvent) => {
+			e.preventDefault();
+			sidebarResizeStartX.current = e.clientX;
+			sidebarResizeStartWidth.current = sidebarWidth;
+			setIsSidebarResizing(true);
+		},
+		[sidebarWidth]
+	);
+
+	useEffect(() => {
+		if (!isSidebarResizing) return;
+
+		const handleMouseMove = (e: MouseEvent) => {
+			e.preventDefault();
+			const delta = e.clientX - sidebarResizeStartX.current;
+			const newWidth = Math.max(
+				MIN_SIDEBAR_WIDTH,
+				Math.min(MAX_SIDEBAR_WIDTH, sidebarResizeStartWidth.current + delta)
+			);
+			setSidebarWidth(newWidth);
+		};
+
+		const handleMouseUp = () => {
+			setIsSidebarResizing(false);
+		};
+
+		document.addEventListener("mousemove", handleMouseMove);
+		document.addEventListener("mouseup", handleMouseUp);
+		document.body.style.userSelect = "none";
+		document.body.style.cursor = "col-resize";
+
+		return () => {
+			document.removeEventListener("mousemove", handleMouseMove);
+			document.removeEventListener("mouseup", handleMouseUp);
+			document.body.style.userSelect = "";
+			document.body.style.cursor = "";
+		};
+	}, [isSidebarResizing]);
 
 	// =========================================================================
 	// File operation state
@@ -283,7 +340,11 @@ export function AppShell() {
 	// Mode-specific file select handler (registered by content components)
 	// =========================================================================
 
-	const [fileSelectHandler, setFileSelectHandler] = useState<((path: string) => void) | null>(null);
+	const fileSelectHandlerRef = useRef<((path: string) => void) | null>(null);
+
+	const handleRegisterFileSelect = useCallback((handler: (path: string) => void) => {
+		fileSelectHandlerRef.current = handler;
+	}, []);
 
 	// =========================================================================
 	// File operation handlers
@@ -317,8 +378,8 @@ export function AppShell() {
 			await project.refreshTree();
 
 			// Open the new file (mode-specific)
-			if (fileSelectHandler) {
-				fileSelectHandler(filePath);
+			if (fileSelectHandlerRef.current) {
+				fileSelectHandlerRef.current(filePath);
 			} else {
 				// Fallback: open in write mode
 				await block.openBlock(filePath);
@@ -333,7 +394,7 @@ export function AppShell() {
 		} finally {
 			setIsCreating(false);
 		}
-	}, [project, newFileName, newFileFolder, fileSelectHandler, block, folderTree]);
+		}, [project, newFileName, newFileFolder, block, folderTree]);
 
 	const handleCancelNewFile = useCallback(() => {
 		setNewFileFolder(null);
@@ -528,16 +589,10 @@ export function AppShell() {
 	// =========================================================================
 
 	const handleFileSelect = useCallback((path: string) => {
-		if (fileSelectHandler) {
-			fileSelectHandler(path);
+		if (fileSelectHandlerRef.current) {
+			fileSelectHandlerRef.current(path);
 		}
-	}, [fileSelectHandler]);
-
-	// =========================================================================
-	// Mode-specific info slot (for active file display in write mode)
-	// =========================================================================
-
-	const [modeInfoSlot, setModeInfoSlot] = useState<React.ReactNode>(null);
+	}, []);
 
 	return (
 		<div className="flex h-screen flex-col">
@@ -560,9 +615,6 @@ export function AppShell() {
 						)}
 					</Button>
 
-					{/* View Toggle */}
-					<ViewToggle activeMode={activeMode} onModeChange={setActiveMode} />
-
 					{/* Project Name & Status */}
 					<div className="flex items-center gap-2">
 						<span className="font-medium">{project.project?.name || "Quill"}</span>
@@ -570,9 +622,6 @@ export function AppShell() {
 							<span className="h-2 w-2 rounded-full bg-amber-500" title="Unsaved changes" />
 						)}
 					</div>
-
-					{/* Mode-specific info slot */}
-					{modeInfoSlot}
 				</div>
 
 				{/* App Menu */}
@@ -587,43 +636,47 @@ export function AppShell() {
 
 			{/* Content Area */}
 			<div className="flex flex-1 overflow-hidden">
-				{/* Sidebar */}
-				{!isSidebarCollapsed && (
-					<div className="w-64 shrink-0 h-full">
-						<SidebarContainer
-							tree={folderTree.filteredTree}
-							selectedPath={folderTree.selectedPath}
-							expandedPaths={folderTree.expandedPaths}
-							searchQuery={folderTree.searchQuery}
-							isSaving={block.activeBlockPath ? block.savingBlocks.has(block.activeBlockPath) : false}
-							onSelect={folderTree.select}
-							onToggleFolder={folderTree.toggleExpanded}
-							onSearchChange={folderTree.setSearchQuery}
-							onRefresh={project.refreshTree}
-							onNewFile={handleNewFileRequest}
-							onNewFolder={handleNewFolderRequest}
-							onRenameFile={handleRenameFileRequest}
-							onDropText={handleDropText}
-							onMoveFile={handleMoveFile}
-							onFileSelect={handleFileSelect}
-						/>
-					</div>
-				)}
+				<ArrangementProvider>
+					{/* Sidebar */}
+					{!isSidebarCollapsed && (
+						<>
+							<div className="shrink-0 h-full" style={{ width: sidebarWidth }}>
+								<SidebarContainer
+									tree={folderTree.filteredTree}
+									selectedPath={folderTree.selectedPath}
+									expandedPaths={folderTree.expandedPaths}
+									searchQuery={folderTree.searchQuery}
+									isSaving={block.activeBlockPath ? block.savingBlocks.has(block.activeBlockPath) : false}
+									onSelect={folderTree.select}
+									onToggleFolder={folderTree.toggleExpanded}
+									onSearchChange={folderTree.setSearchQuery}
+									onRefresh={project.refreshTree}
+									onNewFile={handleNewFileRequest}
+									onNewFolder={handleNewFolderRequest}
+									onRenameFile={handleRenameFileRequest}
+									onDropText={handleDropText}
+									onMoveFile={handleMoveFile}
+									onFileSelect={handleFileSelect}
+								/>
+							</div>
+							{/* Sidebar resize handle */}
+							<div
+								onMouseDown={handleSidebarResizeStart}
+								className={cn(
+									"w-1 shrink-0 cursor-col-resize transition-colors hover:bg-border",
+									isSidebarResizing && "bg-primary/30"
+								)}
+							/>
+						</>
+					)}
 
 				{/* Content Area */}
 				<div className="flex-1 overflow-hidden">
-					{activeMode === "write" && (
-						<EditorContent
-							onRegisterFileSelect={(handler) => setFileSelectHandler(() => handler)}
-							onSetModeInfo={(info) => setModeInfoSlot(info)}
-						/>
-					)}
-					{activeMode === "arrange" && (
-						<ArrangeContent
-							onRegisterFileSelect={(handler) => setFileSelectHandler(() => handler)}
-						/>
-					)}
+					<ArrangeContent
+						onRegisterFileSelect={handleRegisterFileSelect}
+					/>
 				</div>
+				</ArrangementProvider>
 			</div>
 
 			{/* File Dialogs */}

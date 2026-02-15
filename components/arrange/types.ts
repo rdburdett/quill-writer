@@ -9,10 +9,19 @@ import type { BlockMetadata, ArrangementTrack } from "@/lib/project/types";
 // =============================================================================
 
 export interface BlockDragData {
+	[key: string]: unknown;
 	type: "arrange-block";
 	filePath: string;
 	sourceTrack?: number;
+	sourceSceneIndex?: number;
 	sourceSlot?: number;
+}
+
+export interface TrackDragData {
+	[key: string]: unknown;
+	type: "arrange-track";
+	trackId: string;
+	trackIndex: number;
 }
 
 // =============================================================================
@@ -28,27 +37,60 @@ export function getBlockDisplayTitle(filePath: string): string {
 }
 
 /**
- * Get blocks assigned to a specific track
+ * Get blocks assigned to a specific track (all scenes)
  */
 export function getBlocksForTrack(
 	blocks: Record<string, BlockMetadata>,
 	trackIndex: number
 ): Array<{ filePath: string; metadata: BlockMetadata }> {
 	const result: Array<{ filePath: string; metadata: BlockMetadata }> = [];
-	
+
 	for (const [filePath, metadata] of Object.entries(blocks)) {
 		if (metadata.arrangement?.track === trackIndex) {
 			result.push({ filePath, metadata });
 		}
 	}
-	
-	// Sort by slot
+
+	// Sort by sceneIndex then slot
+	result.sort((a, b) => {
+		const sceneA = a.metadata.arrangement?.sceneIndex ?? 0;
+		const sceneB = b.metadata.arrangement?.sceneIndex ?? 0;
+		if (sceneA !== sceneB) return sceneA - sceneB;
+		const slotA = a.metadata.arrangement?.slot ?? 0;
+		const slotB = b.metadata.arrangement?.slot ?? 0;
+		return slotA - slotB;
+	});
+
+	return result;
+}
+
+/**
+ * Get blocks at a specific grid cell (track x scene)
+ */
+export function getBlocksForCell(
+	blocks: Record<string, BlockMetadata>,
+	trackIndex: number,
+	sceneIndex: number
+): Array<{ filePath: string; metadata: BlockMetadata }> {
+	const result: Array<{ filePath: string; metadata: BlockMetadata }> = [];
+
+	for (const [filePath, metadata] of Object.entries(blocks)) {
+		const arr = metadata.arrangement;
+		if (
+			arr &&
+			arr.track === trackIndex &&
+			(arr.sceneIndex ?? 0) === sceneIndex
+		) {
+			result.push({ filePath, metadata });
+		}
+	}
+
 	result.sort((a, b) => {
 		const slotA = a.metadata.arrangement?.slot ?? 0;
 		const slotB = b.metadata.arrangement?.slot ?? 0;
 		return slotA - slotB;
 	});
-	
+
 	return result;
 }
 
@@ -73,16 +115,20 @@ export function getUnassignedBlocks(
 }
 
 /**
- * Recompute slot numbers for a track to be contiguous
+ * Recompute slot numbers for a track+scene cell to be contiguous
  */
 export function normalizeTrackSlots(
 	blocks: Record<string, BlockMetadata>,
-	trackIndex: number
+	trackIndex: number,
+	sceneIndex?: number
 ): Record<string, BlockMetadata> {
-	const trackBlocks = getBlocksForTrack(blocks, trackIndex);
+	const cellBlocks =
+		sceneIndex !== undefined
+			? getBlocksForCell(blocks, trackIndex, sceneIndex)
+			: getBlocksForTrack(blocks, trackIndex);
 	const updatedBlocks = { ...blocks };
-	
-	trackBlocks.forEach(({ filePath, metadata }, index) => {
+
+	cellBlocks.forEach(({ filePath, metadata }, index) => {
 		if (metadata.arrangement) {
 			updatedBlocks[filePath] = {
 				...metadata,
@@ -93,6 +139,6 @@ export function normalizeTrackSlots(
 			};
 		}
 	});
-	
+
 	return updatedBlocks;
 }

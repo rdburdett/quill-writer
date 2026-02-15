@@ -113,6 +113,12 @@ export function initializeYjsDoc(ydoc: Y.Doc, projectName: string, projectId: st
 	if (!map.get("arrangementTracks")) {
 		map.set("arrangementTracks", new Y.Array());
 	}
+	if (!map.get("arrangementScenes")) {
+		const defaultScenes = [{ id: "default", name: "Scene 1", order: 0 }];
+		const arr = new Y.Array();
+		arr.insert(0, defaultScenes);
+		map.set("arrangementScenes", arr);
+	}
 }
 
 // =============================================================================
@@ -327,6 +333,9 @@ export function yjsDocToQuillProject(ydoc: Y.Doc): unknown {
 	// Convert arrays
 	const characters = (map.get("characters") as Y.Array<unknown> | undefined)?.toArray() ?? [];
 	const arrangementTracks = (map.get("arrangementTracks") as Y.Array<unknown> | undefined)?.toArray() ?? [];
+	const arrangementScenes = (map.get("arrangementScenes") as Y.Array<unknown> | undefined)?.toArray() ?? [
+		{ id: "default", name: "Scene 1", order: 0 },
+	];
 	
 	// Convert settings map
 	const settingsMap = map.get("settings") as Y.Map<unknown> | undefined;
@@ -347,6 +356,7 @@ export function yjsDocToQuillProject(ydoc: Y.Doc): unknown {
 		characters,
 		settings,
 		arrangementTracks,
+		arrangementScenes,
 	};
 }
 
@@ -362,6 +372,7 @@ export function quillProjectToYjsDoc(ydoc: Y.Doc, project: {
 	characters: unknown[];
 	settings: Record<string, unknown>;
 	arrangementTracks: unknown[];
+	arrangementScenes?: unknown[];
 }): void {
 	const map = getProjectMap(ydoc);
 	
@@ -440,6 +451,18 @@ export function quillProjectToYjsDoc(ydoc: Y.Doc, project: {
 		const tracks = new Y.Array();
 		tracks.insert(0, project.arrangementTracks);
 		map.set("arrangementTracks", tracks);
+	}
+
+	// Set arrangement scenes
+	const scenes = project.arrangementScenes ?? [{ id: "default", name: "Scene 1", order: 0 }];
+	const scenesArray = map.get("arrangementScenes") as Y.Array<unknown> | undefined;
+	if (scenesArray) {
+		scenesArray.delete(0, scenesArray.length);
+		scenesArray.insert(0, scenes);
+	} else {
+		const arr = new Y.Array();
+		arr.insert(0, scenes);
+		map.set("arrangementScenes", arr);
 	}
 }
 
