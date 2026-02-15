@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useEditorSettingsContext } from "@/components/theme-provider";
@@ -55,7 +55,7 @@ export function TabSystem({
 	const { showBorders, showEdgeFade } = useEditorSettingsContext();
 	const [draggedTabPath, setDraggedTabPath] = useState<string | null>(null);
 	const [dragOverTabPath, setDragOverTabPath] = useState<string | null>(null);
-	const [dragOverTabBar, setDragOverTabBar] = useState(false);
+	const [, setDragOverTabBar] = useState(false);
 
 	return (
 		<div className="flex h-full flex-col">
@@ -76,7 +76,7 @@ export function TabSystem({
 					// Handle text drop on tab bar (create new tab)
 					if (onDropText && e.dataTransfer) {
 						try {
-							const dragData = JSON.parse(e.dataTransfer.getData("application/x-quill-text")) as TextDragData;
+							JSON.parse(e.dataTransfer.getData("application/x-quill-text")) as TextDragData;
 							// For now, we'll need the file path from somewhere - this will be handled by parent
 							// This is a placeholder for tab bar drops
 						} catch {
@@ -129,11 +129,11 @@ export function TabSystem({
 				{showEdgeFade && (
 					<>
 						<div
-							className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-gradient-to-b from-background to-transparent"
+							className="pointer-events-none absolute inset-x-0 top-0 z-10 h-16 bg-linear-to-b from-background to-transparent"
 							aria-hidden="true"
 						/>
 						<div
-							className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-gradient-to-t from-background to-transparent"
+							className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-16 bg-linear-to-t from-background to-transparent"
 							aria-hidden="true"
 						/>
 					</>
@@ -176,9 +176,10 @@ function TabItem({
 	onDrop,
 	onReorder,
 }: TabItemProps) {
+	void onReorder; // Tab reorder via DnD not yet wired
 	const { showBorders } = useEditorSettingsContext();
 	const tabRef = useRef<HTMLDivElement>(null);
-	const [isDraggedOver, setIsDraggedOver] = useState(false);
+	const [, setIsDraggedOver] = useState(false);
 
 	// Set up drag source for tab reordering
 	useEffect(() => {
@@ -255,9 +256,6 @@ function TabItem({
 				// Handle tab reordering - calculate new index based on drop position
 				if (source.data.type === "tab") {
 					// The parent will handle reordering based on the tab index
-					// We pass the current tab's index as the target
-					const draggedFilePath = source.data.filePath as string;
-					// Find current tab index - this will be passed from parent
 					// For now, we'll let the parent handle it via onReorder callback
 				}
 

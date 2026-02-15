@@ -60,10 +60,12 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 	const handleFileSelect = useCallback((path: string) => {
 		folderTree.select(path);
 		setSelectedBlockPath(path);
-	}, [folderTree]);
+	}, [folderTree, setSelectedBlockPath]);
 
-	// Keep ref updated
-	handleFileSelectRef.current = handleFileSelect;
+	// Keep ref updated (must not run during render - refs are for effects/handlers)
+	useEffect(() => {
+		handleFileSelectRef.current = handleFileSelect;
+	}, [handleFileSelect]);
 
 	// Register the handler with the shell (only once)
 	useEffect(() => {
@@ -311,8 +313,9 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 			for (const [filePath, metadata] of Object.entries(updatedBlocks)) {
 				const arr = metadata.arrangement;
 				if (!arr) continue;
-				if (arr.track === deletedIndex) {
-					const { arrangement: _a, ...rest } = metadata;
+			if (arr.track === deletedIndex) {
+				// eslint-disable-next-line @typescript-eslint/no-unused-vars -- omit arrangement when removing from track
+				const { arrangement: _arrangement, ...rest } = metadata;
 					updatedBlocks[filePath] = rest as typeof metadata;
 				} else if (arr.track > deletedIndex) {
 					updatedBlocks[filePath] = {
@@ -347,7 +350,8 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 				if (!arr) continue;
 				const sceneIdx = arr.sceneIndex ?? 0;
 				if (sceneIdx === deletedIndex) {
-					const { arrangement: _a, ...rest } = metadata;
+					// eslint-disable-next-line @typescript-eslint/no-unused-vars -- omit arrangement when removing from scene
+					const { arrangement: _arrangement, ...rest } = metadata;
 					updatedBlocks[filePath] = rest as typeof metadata;
 				} else if (sceneIdx > deletedIndex) {
 					updatedBlocks[filePath] = {
@@ -472,6 +476,7 @@ export function ArrangeContent({ onRegisterFileSelect }: ArrangeContentProps) {
 					onDeleteTrack={handleDeleteTrack}
 					onDeleteScene={handleDeleteScene}
 					onCreateBlockInCell={handleCreateBlockInCell}
+					onToggleIncluded={handleToggleIncluded}
 				/>
 			);
 		}

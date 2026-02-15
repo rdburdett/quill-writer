@@ -5,7 +5,7 @@ import {
 	useContext,
 	type ReactNode,
 	useEffect,
-	useState,
+	useSyncExternalStore,
 } from "react";
 import { useProject, type ProjectState, type ProjectActions } from "@/hooks/use-project";
 import { useBlock, type BlockState, type BlockActions } from "@/hooks/use-block";
@@ -37,13 +37,18 @@ const ProjectContext = createContext<ProjectContextValue | null>(null);
 // Provider
 // =============================================================================
 
+/** No-op subscribe - support is fixed after mount */
+function noopSubscribe() {
+	return () => {};
+}
+
 export function ProjectProvider({ children }: { children: ReactNode }) {
-	const [isSupported, setIsSupported] = useState(false);
-	
-	// Check for File System Access API support on client
-	useEffect(() => {
-		setIsSupported(isFileSystemAccessSupported());
-	}, []);
+	// File System Access API support (stable after mount, no setState in effect)
+	const isSupported = useSyncExternalStore(
+		noopSubscribe,
+		() => isFileSystemAccessSupported(),
+		() => false
+	);
 
 	// Project state
 	const project = useProject();

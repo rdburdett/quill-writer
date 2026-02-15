@@ -49,6 +49,7 @@ export function EditorPanel({ selectedBlockPath, blocks, onContentChange }: Edit
 			cancelled = true;
 		};
 		// block.openBlock is stable; block object reference changes on state updates, causing infinite loop
+		// eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally omit block to avoid infinite loop
 	}, [selectedBlockPath]);
 
 	// =========================================================================

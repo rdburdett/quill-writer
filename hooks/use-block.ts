@@ -79,6 +79,8 @@ function loadTabsFromStorage(projectName: string): PersistedTabState | null {
 	}
 }
 
+/** Reserved for future use: clear persisted tabs when project closes */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function clearTabsFromStorage(projectName: string): void {
 	if (typeof window === "undefined") return;
 	try {
@@ -517,6 +519,7 @@ export function useBlock(options: UseBlockOptions): BlockState & BlockActions {
 
 	// Internal function to open a block without triggering persistence
 	const openBlockInternal = useCallback(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- reserved for background-open feature
 		async (filePath: string, setAsActive: boolean = true) => {
 			if (!directoryHandle || !project) return false;
 

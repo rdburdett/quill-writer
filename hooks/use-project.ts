@@ -332,7 +332,7 @@ export function useProject(): ProjectState & ProjectActions {
 				try {
 					await createDirectory(handle, folder);
 					console.log("[Quill] Created folder:", folder);
-				} catch (e) {
+				} catch {
 					// Folder might already exist, that's fine
 					console.log("[Quill] Folder may already exist:", folder);
 				}

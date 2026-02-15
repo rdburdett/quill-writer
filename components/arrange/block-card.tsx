@@ -45,9 +45,10 @@ export function BlockCard({
 	trackColor,
 	isSelected,
 	onSelect,
-	onDrop,
+	onDrop, // Required by interface; drop handled by grid cells
 	onToggleIncluded,
 }: BlockCardProps) {
+	void onDrop; // Part of interface; drop handled by parent grid cells
 	const cardRef = useRef<HTMLDivElement>(null);
 	const displayTitle = getBlockDisplayTitle(filePath);
 	const arrangement = metadata.arrangement;
